@@ -7,7 +7,7 @@ class GUI(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.title = 'Obs maker'
+        self.title = 'Observation maker for FIFI-LS'
         self.left = 0
         self.top = 0
         self.width = 300
