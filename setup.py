@@ -19,6 +19,8 @@ config = {
     'license': 'GPLv3+',
     'packages': ['obsmaker'],
     'scripts': [],
+    'include_package_data':True,
+    'package_data':{'obsmaker':['version.json','data/*']},
     'install_requires': ['numpy', 'matplotlib', 'astropy'],
     'classifiers':[
             "Programming Language :: Python :: 3",
