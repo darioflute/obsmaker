@@ -18,7 +18,7 @@ config = {
     'download_url': 'https://github.com/darioflute/obsmaker',
     'license': 'GPLv3+',
     'packages': ['obsmaker'],
-    'scripts': [],
+    'scripts': ['bin/obsmaker'],
     'include_package_data':True,
     'package_data':{'obsmaker':['version.json','data/*']},
     'install_requires': ['numpy', 'matplotlib', 'astropy'],
