@@ -44,7 +44,7 @@ def radec(xra, xdec):
     return [ihr, imin, xsec, ideg, imn, xsc]
 
 
-def FI_read_aor(vector):
+def readAOR(vector):
     '''
     extracts values from <Request> for tagnames defined in definitions.py
     input: xml element containing one AOR only (no Proposal info, target list)
@@ -79,7 +79,7 @@ def FI_read_aor(vector):
         else: aor[tag] = ['']
     return aor
 
-def FI_write_basic_faor(aor, PropID, outdir):
+def writeFAOR(aor, PropID, outdir):
     '''
     writes files for input into FIFI-LS ObservationMaker
     input: output of FI_read_aor
@@ -216,13 +216,15 @@ def FI_write_basic_faor(aor, PropID, outdir):
 
     if aor['ChopType'][0] == 'Sym':
         values['TRACKING'] = 'On'
-        values['OBSMODE'] = 'Beam switching'
+        #values['OBSMODE'] = 'Beam switching'
+        values['OBSMODE'] = 'Symmetric'
         values['OFFPOS'] = 'Matched'
         values['OFFPOS_LAMBDA'] = '0.0'
         values['OFFPOS_BETA'] = '0.0'
     elif aor['ChopType'][0] == 'Asym':
         values['TRACKING'] = 'Off'
-        values['OBSMODE'] = 'Asym chop + off'
+        #values['OBSMODE'] = 'Asym chop + off'
+        values['OBSMODE'] = 'Asymmetric'
         if aor['ReferenceType'][0] == 'RA_Dec':
             values['OFFPOS_LAMBDA'] = aor['RefRA'][0]
             values['OFFPOS_BETA']   = aor['RefDec'][0]
@@ -402,3 +404,20 @@ def FI_write_basic_faor(aor, PropID, outdir):
     errmsg += fn + ' and ' + values['MAPLISTPATH'] + ' created.\n'
 
     return errmsg
+
+def readSct(filename):
+    """ 
+    Read a *.sct file and return a dictionary.
+    """
+    print('Loading ', filename)
+    try:
+        dictionary = {}
+        with open(filename) as f:
+            for line in f:
+                line = line.rstrip('\n') 
+                (val, key) = line.split('#')
+                dictionary[key.strip()] = val.strip()
+        return dictionary
+    except:
+        print("This is not a *.sct file")
+        return None

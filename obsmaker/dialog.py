@@ -25,9 +25,14 @@ class TableWidget(QWidget):
         self.col2 = self.createWidget('F', self.tab1.layout)
         self.col3 = self.createWidget('F', self.tab1.layout)
         
+        # Default
+        self.mapListPath = ''
+        
         # Col 1
         c1 = self.col1.layout
-        self.loadTemplate = self.createButton('Load AOR template')
+        self.translateAOR = self.createButton('Load and translate AOR')
+        c1.addRow(self.translateAOR,None)
+        self.loadTemplate = self.createButton('Load template')
         self.exit = self.createButton('Exit ')
         c1.addRow(self.loadTemplate, self.exit)
        
@@ -36,7 +41,7 @@ class TableWidget(QWidget):
         c1.addRow(self.buildObservation, self.writeObservation)
 
         self.observationID = self.createEditableBox("None", 40, "Observation ID: ", c1)
-        self.objectType = self.addComboBox('Object type: ', self.obstypes, c1)
+        self.observationType = self.addComboBox('Observation type: ', self.obstypes, c1)
        
         self.filegpIDred = self.createEditableBox('None', 40, 'File Group ID Red: ', c1)
         self.filegpIDblue = self.createEditableBox('None', 40, 'File Group ID Blue: ', c1)        
@@ -45,15 +50,14 @@ class TableWidget(QWidget):
         self.targetName = self.createEditableBox('None', 40, 'Target name: ', c1)
         self.targetRA = self.createEditableBox('00 00 00.0', 40, 'Target RA: ', c1)
         self.targetDec = self.createEditableBox('+00 00 00.0', 40, 'Target Dec: ', c1)
-        self.redshift = self.createEditableBox('0', 40)
-        self.redshiftUnits = QComboBox()
-        self.redshiftUnits.addItems(["Target vel (cz) [km/s]", "Target redshift (z)"])
-        c1.addRow(self.redshiftUnits, self.redshift)
+        self.redshift = self.createEditableBox('0', 40, 'Redshift [z]: ', c1)
         self.detectorAngle = self.createEditableBox('0', 40, 'Detector angle (E of N): ', c1)
-        observingmodes = ["Symmetric chop", "Asymmetric chop"]
+        observingmodes = ["Symmetric", "Asymmetric"]
+        #observingmodes = ["Beam switching", "Unmatched nodding"]
         self.observingMode = self.addComboBox('Observing mode: ', observingmodes, c1)
+        self.instrumentalMode = self.addComboBox('Instrumental mode: ', self.instmodes, c1)
         self.primaryArray = self.addComboBox('Primary array: ', ["Red", "Blue", "Setpoint"], c1)
-        self.setpoint = self.createEditableBox('N/A', 40, 'Setpoint: ', c1)
+        self.setpoint = self.createEditableBox('n/a', 40, 'Setpoint: ', c1)
         self.col1.layout.addRow(QLabel('Observing stats'),None)
         self.rawIntTime = self.createEditableBox('', 40, 'Raw integration time (s): ', c1)
         self.onsourceIntTime = self.createEditableBox('', 40, 'On source integration time (s): ', c1)
@@ -65,7 +69,7 @@ class TableWidget(QWidget):
         self.nodPattern = self.addComboBox('Nod pattern: ', nodpatterns, c2)
         self.nodcyclesPerMapPosition = self.createEditableBox('1', 20, 'Nod cycles per map position: ', c2)
         self.gratingDirection = self.addComboBox('Grating direction: ', ['Up','Down','None','Split'], c2)
-        self.scanFilesPerSplit = self.createEditableBox('N/A', 40, 'Scan files per split: ', c2)
+        self.scanFilesPerSplit = self.createEditableBox('n/a', 40, 'Scan files per split: ', c2)
         self.rewindMode = self.addComboBox('LOS rewind mode: ', ['Auto', 'Manual'], c2)
 
         c2.addRow(QLabel('Off position'),None)
@@ -76,7 +80,7 @@ class TableWidget(QWidget):
         self.mapOffPos = self.createEditableBox('', 40, 'Off Position map reduction: ', c2)
         c2.addRow(QLabel('Mapping pattern'),None)
         c2.addRow(QLabel('Map center offset from target'),None)
-        self.coordSysMapCenter = self.addComboBox('Coordinate system: ', self.mapcoordsys, c2)        
+        self.coordSysMap = self.addComboBox('Coordinate system: ', self.mapcoordsys, c2)        
         self.lambdaMapCenter = self.createEditableBox('', 40, 'Lambda [arcsec]: ', c2)
         self.betaMapCenter = self.createEditableBox('', 40, 'Beta [arcsec]: ', c2)
         self.mapPattern = self.addComboBox('Mapping pattern: ', ['File', 'Manual'], c2)        
@@ -94,10 +98,9 @@ class TableWidget(QWidget):
         self.chopPosAngle = self.createEditableBox('', 40,'Chop pos angle (S of E): ', c3)  
         self.chopPhase = self.createEditableBox('356', 40)
         self.chopPhaseMode = QComboBox()
-        self.chopPhaseMode.addItems(["Chopper phase default", "Chopper phase manual"])
-        c3.addRow(self.chopPhaseMode, self.chopPhase)
-        #self.chopPhaseDefault = self.createEditableBox('356', 40,'Chopper phase default: ', c3)
-        #self.chopPhaseManual = self.createEditableBox('N/A', 40,'Chopper phase manual: ', c3)
+        self.chopPhaseMode.addItems(["Default", "Manual"])
+        self.chopPhaseMode.currentIndexChanged.connect(self.chopPhaseChange)
+        self.add2widgets('Chopper Phase: ', self.chopPhaseMode, self.chopPhase, c3)
         self.chopLengthFrequency = self.createEditableBox('', 40, 'Chop frequency [Hz] ', c3)
         self.chopLengthSamples = self.createEditableBox('64', 40, 'Chop samples per position ', c3)
         self.trackingInB = self.addComboBox('Tracking in B (asymmetric): ', ['On', 'Off'], c3) 
@@ -121,20 +124,20 @@ class TableWidget(QWidget):
         
         # Column 4 (Red array)
         c4 = self.col4.layout
+        self.gratpatterns = ['Centre', 'Dither', 'Inward dither', 'Start']
         c4.addRow(QLabel('Red Array [100-210 um]'),None)
-        self.setDichroic = self.addComboBox('Dichroic: ', ['105 um', '130 um'], c4)
+        self.setDichroic = self.addComboBox('Dichroic: ', ['105', '130'], c4)
         c4.addRow(QLabel(''),None)
-        self.redLine = self.addComboBox('Line: ', self.redlines, c4)  
-        self.redWave = self.addComboBox('Wavelength [um]: ', self.redwaves, c4)
-        
-        self.redOffset = self.createEditableBox('0', 40)
+        self.redLine = self.addComboBox('Line: ', self.redlines, c4)
+        self.redWave = self.createEditableBox('', 50, 'Wavelength [um]', c4)
+        self.redLine.currentIndexChanged.connect(self.redLineChange)
         self.redOffsetUnits = QComboBox()
-        self.redOffsetUnits.addItems(["Line offset [um]:", "Line offset [units]:"])
-        c4.addRow(self.redOffsetUnits, self.redOffset)
+        self.redOffsetUnits.addItems(["kms", "um", "units"])
+        self.redOffset = QLineEdit('0')
+        self.add2widgets('Line offset: ', self.redOffset, self.redOffsetUnits, c4)
         self.redGratPosMicron = self.createEditableBox('', 50, 'Grating position [um]: ', c4)
         c4.addRow(QLabel('Spectral mode'),None)
-        items = ['Center', 'Dither', 'Inward', 'Start']
-        self.redGratPattern = self.addComboBox('Grating movement pattern: ', items, c4)
+        self.redGratPattern = self.addComboBox('Grating movement pattern: ', self.gratpatterns, c4)
         self.redStepSizeUp = self.createEditableBox('0', 40, 'Step size up [pixels]: ', c4)
         self.redGratPosUp = self.createEditableBox('1', 40, 'Grating position up: ', c4)
         self.redStepSizeDown = self.createEditableBox('0', 40, 'Step size down [pixels]: ', c4)
@@ -156,16 +159,16 @@ class TableWidget(QWidget):
         items = ['First (70-130 um)', 'Second (48-72 um)']
         self.setOrder = self.addComboBox('Order: ', items, c5)
         self.setFilter = self.addComboBox('Filter: ', ['1', '2'], c5)
-        self.blueLine = self.addComboBox('Line: ', self.bluelines, c5)  
-        self.blueWave = self.addComboBox('Wavelength [um]: ', self.bluewaves, c5)        
-        self.blueOffset = self.createEditableBox('0', 40)
+        self.blueLine = self.addComboBox('Line: ', self.bluelines, c5) 
+        self.blueLine.currentIndexChanged.connect(self.blueLineChange)
+        self.blueWave = self.createEditableBox('', 50, 'Wavelength [um]', c5)
         self.blueOffsetUnits = QComboBox()
-        self.blueOffsetUnits.addItems(["Line offset [um]:", "Line offset [units]:"])
-        c5.addRow(self.blueOffsetUnits, self.blueOffset)
+        self.blueOffsetUnits.addItems(["kms", "um", "units"])
+        self.blueOffset = QLineEdit('0')
+        self.add2widgets('Line offset: ', self.blueOffset, self.blueOffsetUnits, c5)
         self.blueGratPosMicron = self.createEditableBox('', 50, 'Grating position [um]: ', c5)
         c5.addRow(QLabel('Spectral mode'),None)
-        items = ['Center', 'Dither', 'Inward', 'Start']
-        self.blueGratPattern = self.addComboBox('Grating movement pattern: ', items, c5)
+        self.blueGratPattern = self.addComboBox('Grating movement pattern: ', self.gratpatterns, c5)
         self.blueStepSizeUp = self.createEditableBox('0', 40, 'Step size up [pixels]: ', c5)
         self.blueGratPosUp = self.createEditableBox('1', 40, 'Grating position up: ', c5)
         self.blueStepSizeDown = self.createEditableBox('0', 40, 'Step size down [pixels]: ', c5)
@@ -181,9 +184,25 @@ class TableWidget(QWidget):
         self.blueCapacitor = self.addComboBox('Capacitor [uF]: ', self.capacitors, c5)
         self.blueScanFileLength = self.createEditableBox('', 40, 'Scan file length [s]: ', c5)
         
+        # Define conversion
+        self.defineConversion()
+        
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
         
+    def blueLineChange(self, index):
+        """If new line selected, populate the wavelength."""
+        self.blueWave.setText(self.bluewaves[index])
+        
+    def redLineChange(self, index):
+        """If new line selected, populate the wavelength."""
+        self.redWave.setText(self.redwaves[index])
+
+    def chopPhaseChange(self, index):
+        """Put default phase value is default is selected."""
+        if index == 0:
+            self.chopPhase.setText('356')
+
     def readDefaults(self):  
         """Read input file with defaults."""
         import json
@@ -206,6 +225,13 @@ class TableWidget(QWidget):
         self.instmodes = config["obs_ref_instmodes"]
         self.capacitors = config["obs_ref_red_capacitors"]
         
+    def add2widgets(self, text, widget1, widget2, layout):
+        box = QWidget()
+        box.layout = QHBoxLayout(box)
+        box.layout.setContentsMargins(0, 0, 0, 0)
+        box.layout.addWidget(widget1)
+        box.layout.addWidget(widget2)
+        layout.addRow(QLabel(text), box)
         
     def addComboBox(self, text, items, layout=None):
         a = QComboBox()
@@ -215,8 +241,8 @@ class TableWidget(QWidget):
         return a
         
     def createEditableBox(self, text, size, label='None', layout=None):
-        box = QLineEdit()
-        box.setText(text)
+        box = QLineEdit(text)
+        #box.setText(text)
         box.resize(size,40)
         if layout is not None:
             layout.addRow(QLabel(label), box)
@@ -249,3 +275,103 @@ class TableWidget(QWidget):
         if layout is not None:
             layout.addWidget(label)
         return label
+    
+    def defineConversion(self):
+        self.k2tw = {
+                'OBSMODE'          :self.observingMode,
+                'PRIMARYARRAY'	   :self.primaryArray,
+                'NODPATTERN'	   :self.nodPattern,
+                'REWIND'	       :self.rewindMode,
+                'OFFPOS'	       :self.offPosition,
+                'CHOPPHASE'	       :self.chopPhaseMode,
+                'DICHROIC'	       :self.setDichroic,
+                'ORDER'		       :self.setOrder,
+                'RED_LAMBDA'       :self.redGratPattern,
+                'BLUE_LAMBDA'	   :self.blueGratPattern,
+                'TRACKING'	       :self.trackingInB,
+                'SCANDIST'	       :self.gratingDirection,
+                'RED_LINE'	       :self.redLine,
+                'RED_OFFSET_TYPE'  :self.redOffsetUnits, 
+                'BLUE_LINE'	       :self.blueLine,
+                'BLUE_OFFSET_TYPE' :self.blueOffsetUnits,
+                'BLUE_FILTER'	   :self.setFilter,
+                'PATTERN'	       :self.mapPattern,
+                'RED_CAPACITOR'	   :self.redCapacitor,
+                'BLUE_CAPACITOR'   :self.blueCapacitor,
+                'CHOPCOORD_SYSTEM' :self.coordSysChop,
+                'MAPCOORD_SYSTEM'  :self.coordSysMap,
+                'OBSTYPE'	       :self.observationType,
+                'SRCTYPE'	       :self.sourceType,
+                'INSTMODE'	       :self.instrumentalMode,
+                'OBSID'		       :self.observationID,
+                'AORID'		       :self.aorID,
+                'FILEGP_R'	       :self.filegpIDred,
+                'FILEGP_B'	       :self.filegpIDblue,
+                'REDSHIFT'	       :self.redshift,
+                'TARGET_NAME'	   :self.targetName,
+                'TARGET_LAMBDA'	   :self.targetRA,
+                'TARGET_BETA'	   :self.targetDec,
+                'SETPOINT'	       :self.setpoint,
+                'NODCYCLES'	       :self.nodCycles,
+                'SPLITS'	       :self.scanFilesPerSplit,
+                'OFFPOS_LAMBDA'	   :self.lambdaOffPos,
+                'OFFPOS_BETA'	   :self.betaOffPos,
+                'OFFPOS_REDUC'	   :self.mapOffPos,
+                'DITHMAP_LAMBDA'   :self.lambdaMapCenter,
+                'DITHMAP_BETA'	   :self.betaMapCenter,
+                'DETANGLE'	       :self.detectorAngle,
+                'MAPLISTPATH'	   :self.mapListPath,
+                'DITHMAP_NUMPOINTS':self.noMapPoints,
+                'DITHMAP_STEPSIZE' :self.mapStepSize,
+                'CHOP_AMP'	       :self.chopAmp,
+                'CHOP_POSANG'	   :self.chopPosAngle,
+                'CHOP_MANUALPHASE' :self.chopPhase,
+                'CHOP_LENGTH'	   :self.chopLengthSamples,
+                'RED_MICRON'	   :self.redWave,
+                'RED_OFFSET'	   :self.redOffset,
+                'RED_SIZEUP'	   :self.redStepSizeUp,
+                'RED_POSUP'	       :self.redGratPosUp,
+                'RED_SIZEDOWN'	   :self.redStepSizeDown,
+                'RED_POSDOWN'	   :self.redGratPosDown,
+                'RED_RAMPLEN'	   :self.redRampLengthSamples,
+                'RED_CHOPCYC'	   :self.redCC4ChopPos,
+                'RED_GRTCYC'	   :self.redGratCycles,
+                'RED_ZBIAS'	       :self.redZeroBias,
+                'RED_BIASR'	       :self.redBiasR,
+                'BLUE_MICRON'	   :self.blueWave,
+                'BLUE_OFFSET'	   :self.blueOffset,
+                'BLUE_SIZEUP'	   :self.blueStepSizeUp,
+                'BLUE_POSUP'	   :self.blueGratPosUp,
+                'BLUE_SIZEDOWN'	   :self.blueStepSizeDown,
+                'BLUE_POSDOWN'	   :self.blueGratPosDown,
+                'BLUE_RAMPLEN'	   :self.blueRampLengthSamples,
+                'BLUE_CHOPCYC'	   :self.blueCC4ChopPos,
+                'BLUE_GRTCYC'	   :self.blueGratCycles,
+                'BLUE_ZBIAS'	   :self.blueZeroBias,
+                'BLUE_BIASR'       :self.blueBiasR
+            }
+        
+    def update(self, dictionary):
+        """Update with values from *.sct file."""
+        
+        for key in dictionary.keys():
+            label = self.k2tw[key]
+            if isinstance(label, QLineEdit):
+                try:
+                    label.setText(dictionary[key])
+                except:
+                    print(key + 'is unkown.')
+            elif isinstance(label, QComboBox):
+                try:
+                    index = label.findText(dictionary[key], Qt.MatchFixedString)
+                    label.setCurrentIndex(index)
+                except:
+                    print(key + 'is unkown.')
+            else:  # No widget, just variable
+                self.k2tw[key] = dictionary[key]
+                # I should maybe read this file and update the gui immediately
+
+        # Check if chopper phase mode is default and put default value
+        if dictionary['CHOPPHASE'] == 'Default' :
+            self.chopPhase.setText('356')
+
