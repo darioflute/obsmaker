@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QFileDialog, QWidget, 
-                             QHBoxLayout,QLineEdit, QComboBox)
-from PyQt5.QtCore import Qt
+                             QHBoxLayout)
+#from PyQt5.QtCore import Qt
 from obsmaker.dialog import TableWidget
 from obsmaker.io import readAOR, writeFAOR, replaceBadChar, readSct
 import xml.etree.ElementTree as ET
@@ -27,7 +27,7 @@ class GUI(QMainWindow):
         self.TW = TableWidget(self)
         mainLayout.addWidget(self.TW)
         self.mapListPath = ''
-        self.TWdictionary()
+        #self.TWdictionary()
         self.defineActions()
         self.show()
         
