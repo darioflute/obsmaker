@@ -102,8 +102,8 @@ class GUI(QMainWindow):
             fileName= fd.selectedFiles()
             sctfile = fileName[0]
             # Load template and update table widget
-            self.dictionary = readSct(sctfile)
-            self.TW.update(self.dictionary)
+            self.aorParameters = readSct(sctfile)
+            self.TW.update(self.aorParameters)
             
 
     def exitObsmaker(self):

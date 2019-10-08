@@ -411,13 +411,13 @@ def readSct(filename):
     """
     print('Loading ', filename)
     try:
-        dictionary = {}
+        parameters = {}
         with open(filename) as f:
             for line in f:
                 line = line.rstrip('\n') 
                 (val, key) = line.split('#')
-                dictionary[key.strip()] = val.strip()
-        return dictionary
+                parameters[key.strip()] = val.strip()
+        return parameters
     except:
         print("This is not a *.sct file")
         return None

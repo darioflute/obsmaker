@@ -351,27 +351,27 @@ class TableWidget(QWidget):
                 'BLUE_BIASR'       :self.blueBiasR
             }
         
-    def update(self, dictionary):
+    def update(self, aorPars):
         """Update with values from *.sct file."""
         
-        for key in dictionary.keys():
+        for key in aorPars.keys():
             label = self.k2tw[key]
             if isinstance(label, QLineEdit):
                 try:
-                    label.setText(dictionary[key])
+                    label.setText(aorPars[key])
                 except:
                     print(key + 'is unkown.')
             elif isinstance(label, QComboBox):
                 try:
-                    index = label.findText(dictionary[key], Qt.MatchFixedString)
+                    index = label.findText(aorPars[key], Qt.MatchFixedString)
                     label.setCurrentIndex(index)
                 except:
                     print(key + 'is unkown.')
             else:  # No widget, just variable
-                self.k2tw[key] = dictionary[key]
+                self.k2tw[key] = aorPars[key]
                 # I should maybe read this file and update the gui immediately
 
         # Check if chopper phase mode is default and put default value
-        if dictionary['CHOPPHASE'] == 'Default' :
+        if aorPars['CHOPPHASE'] == 'Default' :
             self.chopPhase.setText('356')
 
