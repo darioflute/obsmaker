@@ -2,6 +2,7 @@ import os
 import math
 import json
 import numpy as np
+from PyQt5.QtWidgets import QFileDialog
 
 def replaceBadChar(string):
     """ replace some reserved characters with '_'
@@ -421,3 +422,37 @@ def readSct(filename):
     except:
         print("This is not a *.sct file")
         return None
+    
+def readMap(filename=None):
+    
+    if filename is None:
+        fd = QFileDialog()
+        fd.setLabelText(QFileDialog.Accept, "Import")
+        fd.setNameFilters(["Fits Files (*.txt)", "All Files (*)"])
+        fd.setOptions(QFileDialog.DontUseNativeDialog)
+        fd.setViewMode(QFileDialog.List)
+        fd.setFileMode(QFileDialog.ExistingFile)
+        if (fd.exec()):
+            fileNames= fd.selectedFiles()
+            filename = fileNames[0]
+    else:
+        pass
+    print('Reading map ', filename)
+    with open(filename) as file:
+        for i, l in enumerate(file):
+            continue
+    numlines = i + 1
+    if numlines < 2:
+        print('Map file is empty.')
+        return
+    # read the first line - target coords in HH:MM:SS.SS, DD:MM:SS.SS
+    file = open(filename)
+    line = file.readline()
+    if len(line.split()) != 6:
+        print('File is not a map file.')
+        return
+    file.close()
+
+    mapListPath = filename
+    numMapPoints = numlines - 1 
+    return numMapPoints, mapListPath    

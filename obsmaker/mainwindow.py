@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QFileDialog, QWidget,
                              QHBoxLayout)
 #from PyQt5.QtCore import Qt
 from obsmaker.dialog import TableWidget
-from obsmaker.io import readAOR, writeFAOR, replaceBadChar, readSct
+from obsmaker.io import readAOR, writeFAOR, replaceBadChar, readSct, readMap
 import xml.etree.ElementTree as ET
 import sys
 import os
@@ -53,6 +53,8 @@ class GUI(QMainWindow):
             errmsg = ''
             # Save the file path for future reference
             self.pathFile, file = os.path.split(aorfile)
+            # Define path of AOR file in the TW class
+            self.TW.pathFile = self.pathFile 
             tree = ET.ElementTree(file=aorfile)  # or tree = ET.parse(aorfile)
             vector = tree.find('list/vector')
             # Extract Target and Instrument from each AOR
@@ -104,7 +106,15 @@ class GUI(QMainWindow):
             # Load template and update table widget
             self.aorParameters = readSct(sctfile)
             self.TW.update(self.aorParameters)
-            
+            # Load the map if mapfile is defined
+            mapfile = self.TW.mapListPath.strip()
+            if len(mapfile) > 0:
+                try:
+                    noMapPoints, mapListPath = readMap(mapfile)
+                    self.TW.mapListPath = mapListPath
+                    self.TW.noMapPoints.setText(noMapPoints)
+                except:
+                    print('Invalid map file.')
 
     def exitObsmaker(self):
         self.close()
