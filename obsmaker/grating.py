@@ -23,8 +23,8 @@ def inductosyn2wavelength(gratpos, dichroic, array, order, obsdate=''):
         else:
             channel = 'B2'
 
-    path0, file0 = os.path.split(__file__)
-    wvdf = pd.read_csv(os.path.join(path0, '/data/CalibrationResults.csv'), header=[0, 1])
+    path0 = os.path.dirname(os.path.realpath(__file__))
+    wvdf = pd.read_csv(os.path.join(path0, 'data', 'CalibrationResults.csv'), header=[0, 1])
     ndates = (len(wvdf.columns) - 2) // 5
     dates = np.zeros(ndates)
     for i in range(ndates):
@@ -61,19 +61,21 @@ def inductosyn2wavelength(gratpos, dichroic, array, order, obsdate=''):
     QS = w1.iloc[7][co]
     ISOFF = w1.iloc[8:][co].values
 
+    ng = len(gratpos)
     pix = np.arange(16) + 1.
-    result = np.zeros((25, 16))
-    result_dwdp = np.zeros((25, 16))
-    for module in range(25):
-        phi = 2. * np.pi * ISF * (gratpos + ISOFF[module]) / 2.0 ** 24
-        sign = np.sign(pix - QOFF)
-        delta = (pix - 8.5) * PS + sign * (pix - QOFF) ** 2 * QS
-        slitPos = 25 - 6 * (module // 5) + module % 5
-        g = g0 * np.cos(np.arctan2(slitPos - NP, a))  # Careful with arctan
-        lambd = 1000. * (g / order) * (np.sin(phi + gamma + delta) + np.sin(phi - gamma))
-        dwdp = 1000. * (g / order) * (PS + 2. * sign * QS * (pix - QOFF)) * np.cos(phi + gamma + delta)
-        result[module, :] = lambd
-        result_dwdp[module, :] = dwdp
+    result = np.zeros((ng, 25, 16))
+    result_dwdp = np.zeros((ng, 25, 16))
+    for ig, gp in enumerate(gratpos):
+        for module in range(25):
+            phi = 2. * np.pi * ISF * (gp + ISOFF[module]) / 2.0 ** 24
+            sign = np.sign(pix - QOFF)
+            delta = (pix - 8.5) * PS + sign * (pix - QOFF) ** 2 * QS
+            slitPos = 25 - 6 * (module // 5) + module % 5
+            g = g0 * np.cos(np.arctan2(slitPos - NP, a))  # Careful with arctan
+            lambd = 1000. * (g / order) * (np.sin(phi + gamma + delta) + np.sin(phi - gamma))
+            dwdp = 1000. * (g / order) * (PS + 2. * sign * QS * (pix - QOFF)) * np.cos(phi + gamma + delta)
+            result[ig, module, :] = lambd
+            result_dwdp[ig, module, :] = dwdp
 
     return result, result_dwdp
 
@@ -86,6 +88,6 @@ def wavelength2inductosyn(wave, dichroic, array, order, obsdate=''):
     grating = np.arange(0,3000,10)*1000.
     w, dw = inductosyn2wavelength(grating, dichroic, array, order, obsdate)
     
-    return np.interp(wave, w[:,8,12], grating)
+    return np.interp(wave, w[:, 8, 12], grating)
     
     

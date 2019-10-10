@@ -111,6 +111,7 @@ class GUI(QMainWindow):
             if len(mapfile) > 0:
                 try:
                     noMapPoints, mapListPath = readMap(mapfile)
+                    print('File loaded is ', mapListPath)
                     self.TW.mapListPath = mapListPath
                     self.TW.noMapPoints.setText(noMapPoints)
                 except:
