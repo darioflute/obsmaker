@@ -1,4 +1,5 @@
 import os
+import io
 import math
 import json
 import numpy as np
@@ -422,6 +423,28 @@ def readSct(filename):
     except:
         print("This is not a *.sct file")
         return None
+    
+def writeSct(sctPars):
+    """
+    Write a *.sct file from a dictionary.
+    """
+    # Open a dialog
+    fd = QFileDialog()
+    fd.setLabelText(QFileDialog.Accept, "Export as")
+    fd.setNameFilters(["Scan description (*.sct)", "All Files (*)"])
+    fd.setOptions(QFileDialog.DontUseNativeDialog)
+    fd.setViewMode(QFileDialog.List)
+    if (fd.exec()):
+        filenames= fd.selectedFiles()
+        filename = filenames[0]
+        if filename[-4:] != '.sct':
+            filename += '.sct'              
+        print("Exporting scan description to file: ", filename)
+        with io.open(filename, mode='w') as f:
+            for key in sctPars.keys():
+                f.write("{0:25s}#{1:s}\n".format(key.upper(),sctPars[key]))
+    print('File '+filename+' exported.')
+    
     
 def readMap(filename=None):
     

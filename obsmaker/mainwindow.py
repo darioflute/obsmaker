@@ -34,6 +34,7 @@ class GUI(QMainWindow):
     def defineActions(self):
         self.TW.translateAOR.clicked.connect(self.translateAOR)
         self.TW.loadTemplate.clicked.connect(self.loadTemplate)
+        self.TW.loadMapPatternFile.clicked.connect(self.loadMapFile)
         self.TW.exit.clicked.connect(self.exitObsmaker)
         
     def translateAOR(self):
@@ -111,11 +112,28 @@ class GUI(QMainWindow):
             if len(mapfile) > 0:
                 try:
                     noMapPoints, mapListPath = readMap(mapfile)
-                    print('File loaded is ', mapListPath)
                     self.TW.mapListPath = mapListPath
-                    self.TW.noMapPoints.setText(noMapPoints)
+                    self.TW.noMapPoints.setText(str(noMapPoints))
                 except:
                     print('Invalid map file.')
+                    
+    def loadMapFile(self):
+        """Load a map file."""
+        fd = QFileDialog()
+        fd.setLabelText(QFileDialog.Accept, "Import")
+        fd.setNameFilters(["Fits Files (*.txt)", "All Files (*)"])
+        fd.setOptions(QFileDialog.DontUseNativeDialog)
+        fd.setViewMode(QFileDialog.List)
+        fd.setFileMode(QFileDialog.ExistingFile)
+        if (fd.exec()):
+            fileName= fd.selectedFiles()
+            mapfile = fileName[0]
+            try:
+                noMapPoints, mapListPath = readMap(mapfile)
+                self.TW.mapListPath = mapListPath
+                self.TW.noMapPoints.setText(str(noMapPoints))
+            except:
+                print('Invalid map file.')            
 
     def exitObsmaker(self):
         self.close()

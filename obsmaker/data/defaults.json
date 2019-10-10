@@ -61,6 +61,7 @@
 "t_ta_move" : 8.0,
 "t_grating_move" : 0.0,
 "obs_eff" : 0.5,
-"f_chop" : 2.0
+"f_chop" : 2.0,
+"chop_phase_default": 356
 
 }

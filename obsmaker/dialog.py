@@ -5,7 +5,21 @@ import os
 import math
 import numpy as np
 from obsmaker.grating import inductosyn2wavelength, wavelength2inductosyn
-from obsmaker.io import velocity2z
+from obsmaker.io import velocity2z, writeSct
+
+def mround(number, multiple):
+    """
+    MS Excel's MROUND function.  Rounds up number to the closest integer
+    multiple of multiple if number % multiple is greater than
+    multiple / 2.
+    """
+    num = int(number / multiple)
+    rem = number % multiple
+    if rem > multiple / 2.:
+        return multiple * (num + 1)
+    else:
+        return multiple * num
+
 
 class TableWidget(QWidget):
     
@@ -45,6 +59,7 @@ class TableWidget(QWidget):
         self.buildObservation = self.createButton('Build observation')
         self.buildObservation.clicked.connect(self.buildObs)
         self.writeObservation = self.createButton('Write observation')
+        self.writeObservation.clicked.connect(self.writeObs)
         self.writeObservation.setEnabled(False)
         c1.addRow(self.buildObservation, self.writeObservation)
 
@@ -104,7 +119,7 @@ class TableWidget(QWidget):
         self.coordSysChop = self.addComboBox('Coordinate system: ', self.chopcoordsys, c3)        
         self.chopAmp = self.createEditableBox('', 40,'Chop amplitude (1/2 throw): ', c3)        
         self.chopPosAngle = self.createEditableBox('', 40,'Chop pos angle (S of E): ', c3)  
-        self.chopPhase = self.createEditableBox('356', 40)
+        self.chopPhase = self.createEditableBox(str(self.chop_phase_default), 40)
         self.chopPhaseMode = QComboBox()
         self.chopPhaseMode.addItems(["Default", "Manual"])
         self.chopPhaseMode.currentIndexChanged.connect(self.chopPhaseChange)
@@ -117,6 +132,7 @@ class TableWidget(QWidget):
         self.noGratPosChop = self.createEditableBox('', 40, 'No of grating positions:  ', c3)
         self.totGratPositions = self.createEditableBox('1', 40, 'Total no of mapping positions: ', c3)
         self.chopCompute = self.createButton('Compute')
+        self.chopCompute.clicked.connect(self.grating_xls)
         c3.addRow(self.chopCompute, None)
         self.nodCycles = self.createEditableBox('', 40, 'No of nod cycles: ', c3)
         self.ccPerGratPos = self.createEditableBox('', 40, 'No of CC per grating pos: ', c3)
@@ -124,7 +140,7 @@ class TableWidget(QWidget):
         self.noGratPos4Nod = self.createEditableBox('', 40, 'No of grating pos per nod: ', c3)
         self.gratCycle4Nod = self.createEditableBox('', 40, 'Grating cycle per nod (30.0): ', c3)
         self.timeCompleteMap = self.createEditableBox('', 40, 'Time to complete map [min]: ', c3)
-        c3.addRow(QLabel('Scan description file: '), self.loadScanDescriptionFile)
+        #c3.addRow(QLabel('Scan description file: '), self.loadScanDescriptionFile)
         
         # Arrays tab
         self.col4 = self.createWidget('F', self.tab2.layout)
@@ -211,7 +227,7 @@ class TableWidget(QWidget):
     def chopPhaseChange(self, index):
         """Put default phase value is default is selected."""
         if index == 0:
-            self.chopPhase.setText('356')
+            self.chopPhase.setText(str(self.chop_phase_default))
 
     def readDefaults(self):  
         """Read input file with defaults."""
@@ -238,6 +254,7 @@ class TableWidget(QWidget):
         self.t_ta_move = config["t_ta_move"]
         self.t_grating_move = config["t_grating_move"]
         self.f_chop = config["f_chop"]
+        self.chop_phase_default = config["chop_phase_default"]
         
     def add2widgets(self, text, widget1, widget2, layout):
         box = QWidget()
@@ -382,14 +399,17 @@ class TableWidget(QWidget):
                 except:
                     print(key + 'is unkown.')
             else:  # No widget, just variable
-                self.k2tw[key] = os.path.join(self.pathFile, aorPars[key])
-                print('Map file is in: ', os.path.join(self.pathFile, aorPars[key]))
-                print('Updated variable: ', self.mapListPath)
-                # I should maybe read this file and update the gui immediately
+                if key == 'MAPLISTPATH':
+                    maplistpath = os.path.join(self.pathFile, aorPars[key])
+                    # self.k2tw[key] = maplistpath # does not work ...
+                    self.mapListPath = maplistpath
+                    print('Map file is in: ', maplistpath)
+                else:
+                    print('Unknown key ',key)
 
         # Check if chopper phase mode is default and put default value
         if aorPars['CHOPPHASE'] == 'Default' :
-            self.chopPhase.setText('356')
+            self.chopPhase.setText(str(self.chop_phase_default))
 
 
     def buildObs(self):
@@ -400,6 +420,7 @@ class TableWidget(QWidget):
         self.gui2vars()
         self.calculate()
         self.var['ind_scanindex'] = 0
+        self.var['commandline_option'] = '0' # No command line option for the moment
         print('Observation built')
         self.writeObservation.setEnabled(True)           
 
@@ -416,7 +437,8 @@ class TableWidget(QWidget):
             elif isinstance(label, QComboBox):
                 self.var[key.lower()] = label.currentText()
             else:
-                self.var[key.lower()] = label
+                if key.lower() == 'maplistpath':
+                    self.var[key.lower()] = self.mapListPath
         
         # convert values that need to be int and float for calculations
         ints = [
@@ -472,6 +494,7 @@ class TableWidget(QWidget):
         self.var['ch_scheme'] = self.chopScheme.currentText()
         self.var['symmetry'] = self.observingMode.currentText()
         # self.var['scandesdir'] = self.e_scandesdir.get()  # Directory to put scd files
+        self.var['scandesdir'] = '.'  # Same directory where the AOR files are read
         
         # calculate any "support" variables needed
         self.var['target_lambda_hms'] = self.var['target_lambda']
@@ -834,7 +857,7 @@ class TableWidget(QWidget):
                 self.var['nod_lambda'][1 + i] = mapclam + idx * dithstep / self.var['offpos_reduc']
                 self.var['nod_beta'][1 + i] = mapcbet
                 self.var['nod_lambda'][2 + i] = mapclam
-                self.var['nod_beta'][2 + i] = mapcbet + idx *dithstep / self.var['offpos_reduc']
+                self.var['nod_beta'][2 + i] = mapcbet + idx * dithstep / self.var['offpos_reduc']
                 self.var['nod_lambda'][3 + i] = mapclam - idx * dithstep / self.var['offpos_reduc']
                 self.var['nod_beta'][3 + i] = mapcbet
                 self.var['nod_lambda'][4 + i] = mapclam
@@ -1151,7 +1174,7 @@ class TableWidget(QWidget):
                             self.var['blue_grstart'][0] = int(self.var['blue_grtpos']) - widthnodcycle // 2
                         else:
                             self.var['blue_grstart'][0] = int(self.var['blue_grtpos']) -  \
-                                int(math.floor(widthnodcycle)) - int(stepsizeblue) / 2  ## CHECK
+                                int(math.floor(widthnodcycle)) - int(stepsizeblue) // 2  ## CHECK
                     revs = 1
                     #  begin spectral dithering routine
                     dith = 1
@@ -1286,8 +1309,7 @@ class TableWidget(QWidget):
 
         # Bright Object mode
         # print self.var['nodpattern']
-        if self.var['nodpattern'] == 'ABA' or \
-            self.var['nodpattern'] == 'AABAA':
+        if self.var['nodpattern'] in ['ABA','AABAA']:
             # nod interval, seconds
             t_nod_interval = t_int_source * 2
             # time spent in one grating position, seconds
@@ -1295,32 +1317,19 @@ class TableWidget(QWidget):
             # total time to complete map, minutes
             t_map = (self.var['nodcycles'] + 1) *  \
                 (t_int_source*2 + self.t_ta_move) * n_map_pts / self.var['nodcycles'] / 60.
-
-            # update Spreadsheet Replacer with results
-            # self.update_entry(self.e_n_nod_cycles, n_nod_cycles)
-            self.update_entry(self.e_n_cc_per_grating_pos,
-                n_cc_per_grating_pos)
-            self.update_entry(self.e_n_nod_cycles, '')
-            self.update_entry(self.e_n_grating_pos_per_nod,'')
-            self.update_entry(self.e_t_nod_grating, '')
-            self.update_entry(self.e_t_map, t_map)
-            # copy results to GUI
-            self.update_entry(self.e_red_posup, n_grating_pos)
-            self.update_entry(self.e_blue_posup, n_grating_pos)
-            self.update_entry(self.e_red_chopcyc, n_cc_per_grating_pos)
-            self.update_entry(self.e_blue_chopcyc, n_cc_per_grating_pos)
-
-        # (AB)*n and (ABBA)*(n/2) modes
-        else:
+            # update GUI
+            self.nodCycles.setText('')
+            self.noGratPos4Nod.setText('')
+            self.gratCycle4Nod.setText('')
+        else: # (AB)*n and (ABBA)*(n/2) modes
             t_nod_interval = 30.    # nod interval, seconds
             # number of nod cycles needed to complete all grating positions
-            n_nod_cycles = int( t_grating_sweep / t_nod_interval)   # CHECKL is this the same ???
-            #n_nod_cycles = mround(math.ceil (t_grating_sweep * 2 / t_nod_interval), 2) / 2
+            #n_nod_cycles = int( t_grating_sweep / t_nod_interval)   # CHECK is this the same ???
+            n_nod_cycles = mround(math.ceil (t_grating_sweep * 2 / t_nod_interval), 2) / 2
             # number of grating positions on one nod
             n_grating_pos_per_nod = n_grating_pos / n_nod_cycles
-            # time of one nod, based on the number of grating positions on the
-            # nod, seconds.  we want this to be 30.
-            t_nod_grating = t_grating_pos_use * n_grating_pos_per_nod
+            # time of one nod, based on the number of grating positions on the nod, seconds.
+            t_nod_grating = t_grating_pos_use * n_grating_pos_per_nod # We want it to be 30
             # time interval of AB nod pair
             t_nod_ab = (t_nod_grating + self.t_ta_move) * 2  # should be 80
             # total time to step thru all grating positions
@@ -1328,19 +1337,402 @@ class TableWidget(QWidget):
             # total time to complete map, minutes
             t_map = t_total * n_map_pts / 60.
 
-            # update Spreadsheet Replacer with results
-            self.update_entry(self.e_n_nod_cycles, n_nod_cycles)
-            self.update_entry(self.e_n_cc_per_grating_pos, n_cc_per_grating_pos)
-            self.update_entry(self.e_n_grating_pos_per_nod, n_grating_pos_per_nod)
-            self.update_entry(self.e_t_nod_grating, t_nod_grating)
-            self.update_entry(self.e_t_map, t_map)
-            # copy results to GUI
-            self.update_entry(self.e_red_posup, n_grating_pos)
-            self.update_entry(self.e_blue_posup, n_grating_pos)
-            self.update_entry(self.e_nodcycles, n_nod_cycles)
-            self.update_entry(self.e_red_chopcyc, n_cc_per_grating_pos)
+            # update GUI
+            self.nodCycles.setText(str(n_nod_cycles))
+            self.noGratPos4Nod.setText(str(n_grating_pos_per_nod))
+            self.gratCycle4Nod.setText(str(t_nod_grating))
+        # Common updates
+        self.ccPerGratPos.setText(str(n_cc_per_grating_pos))
+        self.timeCompleteMap.setText("{0:.2f}".format(round(t_map,2)))
+        self.redGratPosUp.setText("{0:.0f}".format(round(n_grating_pos,0)))
+        self.blueGratPosUp.setText("{0:.0f}".format(round(n_grating_pos,0)))
+        self.blueCC4ChopPos.setText(str(n_cc_per_grating_pos))  # Missing in previous version
+        self.redCC4ChopPos.setText(str(n_cc_per_grating_pos))
         
+    def writeObs(self):
+        """
+        Write observation.
+        """
+        scan = ScanDescription()
+        # make map
+        print('Making ' + self.var['pattern'] + ' map.')
+        if self.var['pattern'] == 'Inward spiral':
+            self.var['map_lambda'].reverse()
+            self.var['map_beta'].reverse()
+            result = self.makemap(scan)
+        else:  # 'File', 'N-point cross', 'Spiral', 'Stare'
+            result = self.makemap(scan)
+
+        # save template and update History box: insert text at beginning
+        if result != False:
+            self.exportSct()
+            
+    def makemap(self, s):
+        """
+        Create map.        
+        """
+        posidx = 0
+        # Loop through scan writing process based on the length of map file
+        if self.var['nodpattern'] in ['ABA', 'AABAA']:
+            result = self.writenods(posidx, s)
+            if result == False:
+                print('ERROR writing nods.')
+                return False
+        else:
+            for ml, mb in zip(self.var['map_lambda'], self.var['map_beta']):
+                # These are overwritten by specific map position definitions in writeA and writeB
+                s.scn['del_lam_map'] = ml  # self.var['map_lambda'][posidx]
+                s.scn['del_bet_map'] = mb  # self.var['map_beta'][posidx]
+                print('Writing scans for position ' + str(posidx + 1))
+                result = self.writenods(posidx, s)
+                if result == False:
+                    print('ERROR writing nods.')
+                    return False
+                posidx += 1
+
+        print('Wrote ' + str(self.var['ind_scanindex']) + ' scans.')
         
+    def writenods(self, posidx, s):
+        rewind = 0
+        if self.var['nodcycles'] != 0:
+            if self.var['nodpattern'] == 'AB':
+                for idx in range(self.var['nodcycles']):
+                    nodcyclenum = idx
+                    if self.var['rewind'] == 'Auto':
+                        if self.var['ind_scanindex'] == 0:
+                            rewind = 2  # force for first scan description
+                        elif self.var['ind_scanindex'] > 0:
+                            rewind = 1  # allow for all A
+                    # write A
+                    for splitidx in range(self.var['splits']):
+                        result = self.writeA(posidx, s, nodcyclenum, splitidx, rewind)
+                        if result == False:
+                            return False
+                    rewind = 0  # block for all B
+                    # write B
+                    for splitidx in range(self.var['splits']):
+                        result = self.writeB(posidx, s, nodcyclenum, splitidx, rewind)
+            elif self.var['nodpattern'] == 'ABBA':
+                idx = 0
+                while idx < self.var['nodcycles']:
+                    nodcyclenum = idx
+                    if self.var['rewind'] == 'Auto':
+                        if self.var['ind_scanindex'] == 0:
+                            rewind = 2  # force for first scan description
+                        elif self.var['ind_scanindex'] > 0:
+                            rewind = 1  # allow for all A
+                    # write A
+                    for splitidx in range(self.var['splits']):
+                        if splitidx > 0: rewind = 0
+                        result = self.writeA(posidx, s, nodcyclenum, splitidx, rewind)
+                        if result == False:
+                            return False
+                    rewind = 0  # block for all B
+                    # write B
+                    for splitidx in range(self.var['splits']):
+                        self.writeB(posidx, s, nodcyclenum, splitidx, rewind)
+                    idx += 1
+                    nodcyclenum = idx
+                    # continue if we have even number of nod cycles
+                    if nodcyclenum < self.var['nodcycles']:
+                        if self.var['rewind'] == 'Auto':
+                            rewind = 1  # allow for first B
+                        # write B
+                        for splitidx in range(self.var['splits']):
+                            if splitidx > 0: rewind = 0
+                            self.writeB(posidx, s, nodcyclenum, splitidx, rewind)
+                        rewind = 0  # block for all A
+                        # write A
+                        for splitidx in range(self.var['splits']):
+                            self.writeA(posidx, s, nodcyclenum, splitidx, rewind)
+                    idx += 1
+            if self.var['nodpattern'] in ['ABA', 'AABAA']:
+                while posidx < self.var['dithmap_numpoints']:
+                    nodcyclenum = 0
+                    print('Writing scans for position ' + str(posidx + 1))
+                    # write first half of As (self.var['nodcycles'] / 2)
+                    while nodcyclenum < (self.var['nodcycles'] / 2):
+                        if posidx > self.var['dithmap_numpoints'] - 1:
+                            print('INFO: No available next map position for next on (A) position.\n'+
+                                  'Think about using a bigger map or increasing n. Going to off (B) position\n')
+                            break
+                        rewind = 0  # block rewind for all B
+                        if self.var['rewind'] == 'Auto':
+                            if self.var['ind_scanindex'] == 0:
+                                rewind = 2  # force rewind for first scan
+                            else:
+                                if posidx % self.var['nodcycles'] == 0:
+                                    rewind = 1  # allow for all A
+                        for splitidx in range(self.var['splits']):
+                            result = self.writeA(posidx, s, nodcyclenum, splitidx, rewind)
+                            if result == False:
+                                return False
+                        nodcyclenum += 1
+                        posidx += 1
+                    # write middle B
+                    posidx -= 1
+                    rewind = 0  # block for all B
+                    for splitidx in range(self.var['splits']):
+                        self.writeB(posidx, s, nodcyclenum, splitidx, rewind)
+                    posidx += 1
+
+                    # write second half of As
+                    while nodcyclenum <= self.var['nodcycles'] - 1:
+                        if posidx > self.var['dithmap_numpoints'] - 1:
+                            print('No available next map position for next on (A) position.\n ' +
+                                  'Think about using a bigger map or decreasing n.')
+                            break
+                        for splitidx in range(self.var['splits']):
+                            self.writeA(posidx, s, nodcyclenum, splitidx, rewind)
+                        nodcyclenum += 1
+                        posidx += 1
+                    # posidx -= 1
+            elif self.var['nodpattern'] == 'A':
+                for idx in range(self.var['nodcycles']):
+                    nodcyclenum = idx
+                    if self.var['rewind'] == 'Auto' and  \
+                        self.var['ind_scanindex'] == 0:
+                        rewind = 2  # force for first scan description
+                    if self.var['rewind'] == 'Auto' and  \
+                        self.var['ind_scanindex'] > 0:
+                        rewind = 1  # allow for all A
+                    # write A
+                    for splitidx in range(self.var['splits']):
+                        result = self.writeA(posidx, s, nodcyclenum, splitidx, rewind)
+                        if result == False:
+                            return False
+        else:  # case of no nod, just write the on position
+            print('No nod: not implemented yet.')
+    
+    def writeA(self, posidx, s, nodcyclenum, splitidx, rewind):
+        self.populate_scan(s, nodcyclenum, splitidx)
+        s.scn['los_focus_update'] = rewind
+        s.scn['offpos_lambda'] = 0
+        s.scn['offpos_beta'] = 0
+        s.scn['del_lam_map'] = self.var['map_lambda'][posidx]
+        s.scn['del_bet_map'] = self.var['map_beta'][posidx]
+        # pass the current map positions to the off position for matched nodding
+        self.var['map_laston_lambda'] = s.scn['del_lam_map']
+        self.var['map_laston_beta'] = s.scn['del_bet_map']
+        s.scn['ch_beam'] = 1  # always on regardless of tracking
+
+        scannum = self.var['ind_scanindex'] + 1
+        scanfilename = '{0:05d}_{1:s}_'.format(scannum, self.var['obsid']) + \
+                str(int(round(self.var['map_laston_lambda']))).strip() + '_' +  \
+                str(int(round(self.var['map_laston_beta']))).strip() + '_A.scn'
+        scanfilepath = os.path.join(self.var['scandesdir'], self.var['obsid'], scanfilename)        
+        # print scanfilename
+        check = s.check()
+        if check[0] == 'NoErrors':
+            print('Writing nod A.')
+            self.var['ind_scanindex'] += 1
+            s.write(scanfilepath)
+        else:
+            print(check[1])
+            return False
+
+    def writeB(self, posidx, s, nodcyclenum, splitidx, rewind):
+        self.populate_scan(s, nodcyclenum, splitidx)
+        s.scn['los_focus_update'] = rewind
+        if self.var['offpos'] == 'Matched':
+            s.scn['offpos_lambda'] = 0.
+            s.scn['offpos_beta'] = 0.
+            s.scn['del_lam_map'] = self.var['map_laston_lambda']
+            s.scn['del_bet_map'] = self.var['map_laston_beta']
+        elif self.var['offpos'] == 'Absolute':
+            s.scn['offpos_lambda'] = 0.
+            s.scn['offpos_beta'] = 0.
+            s.scn['del_lam_map'] = 0.
+            s.scn['del_bet_map'] = 0.
+            s.scn['target_lambda'] = self.var['offpos_lambda']
+            s.scn['target_beta'] = self.var['offpos_beta']
+        elif self.var['offpos'] == 'Relative to target':
+            s.scn['offpos_lambda'] = self.var['offpos_lambda']
+            s.scn['offpos_beta'] = self.var['offpos_beta']
+            s.scn['del_lam_map'] = 0.
+            s.scn['del_bet_map'] = 0.
+        elif self.var['offpos'] == 'Relative to active map pos':
+            s.scn['offpos_lambda'] = self.var['offpos_lambda'] + self.var['nod_lambda'][posidx]
+            s.scn['offpos_beta'] = self.var['offpos_beta'] + self.var['nod_beta'][posidx]
+            if self.var['pattern'] == 'File':
+                s.scn['offpos_lambda'] = self.var['nod_lambda'][posidx]
+                s.scn['offpos_beta'] = self.var['nod_beta'][posidx]
+            s.scn['del_lam_map'] = 0.
+            s.scn['del_bet_map'] = 0.
+
+        # Set beam variable to -1 (Asymmetric chop and tracking on) or
+        # 0 (Asymmetric chop and tracking off) or -1 (Symmetric chop)
+        if self.var['symmetry'] == 'Asymmetric':
+            if self.var['tracking'] == 'On':
+                s.scn['ch_beam'] = -1
+            else:
+                s.scn['ch_beam'] = 0
+        else:
+            s.scn['ch_beam'] = -1
+
+        scannum = self.var['ind_scanindex'] + 1
+        scanfilename = '{0:05d}_{1:s}_'.format(scannum, self.var['obsid']) + \
+            str(int(round(self.var['map_laston_lambda']))).strip() + '_' +  \
+            str(int(round(self.var['map_laston_beta']))).strip() + '_B.scn'
+        scanfilepath = os.path.join(self.var['scandesdir'], self.var['obsid'], scanfilename)        
+
+        check = s.check()
+        if check[0] == 'NoErrors':
+            print('Writing nod B.')
+            self.var['ind_scanindex'] += 1
+            s.write(scanfilepath)
+        else:
+            print(check[1])
+            return False
+
+        # Reset the target coord params because the absolute case changes them
+        s.scn['target_lambda'] = self.var['target_lambda_deg']
+        s.scn['target_beta'] = self.var['target_beta_deg']
+        s.scn['obs_coord_sys'] = self.var['target_coordsys']
+
+    def populate_scan(self, s, nodcyclenum, splitidx):
+        """
+        Update scan with variable values.
+        """
+        s.scn['target_name'] = self.var['target_name']
+        s.scn['aorid'] = self.var['aorid']
+        s.scn['filegp_r'] = self.var['filegp_r']
+        s.scn['filegp_b'] = self.var['filegp_b']
+        s.scn['obstype'] = self.var['obstype']
+        # s.scn['focusoff'] = self.var['focusoff']
+        s.scn['srctype'] = self.var['srctype']
+        s.scn['instmode'] = self.var['instmode']  # 'nodtype'? 'obsmode'?
+        s.scn['redshift'] = self.var['redshift']
+        s.scn['obs_coord_sys'] = self.var['target_coordsys']
+        s.scn['target_lambda'] = self.var['target_lambda_deg']
+        s.scn['target_beta'] = self.var['target_beta_deg']
+        s.scn['mapcoord_system'] = self.var['mapcoord_system']
+        s.scn['off_coord_sys'] = 'J2000'
+        s.scn['offpos_lambda'] = self.var['offpos_lambda']
+        s.scn['offpos_beta'] = self.var['offpos_beta']
+        s.scn['detangle'] = self.var['detangle']
+        if self.var['commandline_option'] == '0':
+            s.scn['primaryarray'] = self.var['primaryarray']
+        elif self.var['commandline_option'] == '1':
+            s.scn['primaryarray'] = self.var['setpoint']
+        s.scn['los_focus_update'] = 0
+        s.scn['nodpattern'] = self.var['nodpattern']
+        s.scn['dichroic'] = self.var['dichroic']
+        s.scn['order'] = self.var['order']
+        s.scn['blue_filter'] = self.var['blue_filter']
+        s.scn['gr_cycles'] = [self.var['red_grtcyc'], self.var['blue_grtcyc']]
+        s.scn['gr_stepsize_up'] = [
+            int(self.var['red_sizeup_isu']),
+            int(self.var['blue_sizeup_isu'])]
+        s.scn['gr_stepsize_down'] = [
+            int(self.var['red_sizedown_isu']),
+            int(self.var['blue_sizedown_isu'])]
+        gratingDirection = self.gratingDirection.currentText()
+        if gratingDirection == "None":
+            s.scn['gr_start'] = [int(self.var['red_grstart']), int(self.var['blue_grstart'])]
+            s.scn['gr_lambda'] = [self.var['red_lambdastart'], self.var['blue_lambdastart']]
+            s.scn['gr_steps_up'] = [   # minimum steps is 1
+                max([self.var['red_posup'], 1]),
+                max([self.var['blue_posup'], 1])]
+            s.scn['gr_steps_down'] = [int(self.var['red_posdown']), int(self.var['blue_posdown'])]
+        elif gratingDirection == "Up":
+            s.scn['gr_start'] = [
+                int(self.var['red_grstart'][nodcyclenum]),
+                int(self.var['blue_grstart'][nodcyclenum])]
+            s.scn['gr_lambda'] = [
+                self.var['red_lambdastart'][nodcyclenum],
+                self.var['blue_lambdastart'][nodcyclenum]]
+            s.scn['gr_steps_up'] = [
+                max([int(self.var['red_posup'] / self.var['nodcycles']), 1]),
+                max([int(self.var['blue_posup'] / self.var['nodcycles']), 1])]
+            s.scn['gr_steps_down'] = [int(self.var['red_posdown']), int(self.var['blue_posdown'])]
+        elif gratingDirection == "Down":
+            s.scn['gr_start'] = [
+                int(self.var['red_grstart'][nodcyclenum]),
+                int(self.var['blue_grstart'][nodcyclenum])]
+            s.scn['gr_lambda'] = [
+                self.var['red_lambdastart'][nodcyclenum],
+                self.var['blue_lambdastart'][nodcyclenum]]
+            s.scn['gr_steps_up'] = [max([self.var['red_posup'], 1]), max([self.var['blue_posup'], 1])]
+            s.scn['gr_steps_down'] = [
+                int(self.var['red_posdown'] / self.var['nodcycles']),
+                int(self.var['blue_posdown'] / self.var['nodcycles'])]
+        elif gratingDirection == "Split":
+            s.scn['gr_start'] = [
+                int(self.var['red_grstart'][splitidx]),
+                int(self.var['blue_grstart'][splitidx])]
+            s.scn['gr_lambda'] = [
+                    self.var['red_lambdastart'][splitidx], 
+                    self.var['blue_lambdastart'][splitidx]]
+            s.scn['gr_steps_up'] = [
+                max([int(self.var['red_posup'] / self.var['splits']), 1]),
+                max([int(self.var['blue_posup'] / self.var['splits']), 1])]
+            s.scn['gr_steps_down'] = [
+                max([int(self.var['red_posdown'] / self.var['splits']), 1]),
+                max([int(self.var['blue_posdown'] / self.var['splits']), 1])]
+
+        if self.var['nodpattern'] in ['ABA', 'AABAA']:
+            s.scn['gr_start'] = [int(self.var['red_grstart'][0]), int(self.var['blue_grstart'][0])]
+            s.scn['gr_lambda'] = [self.var['red_lambdastart'][0], self.var['blue_lambdastart'][0]]
+            s.scn['gr_steps_up'] = [int(self.var['red_posup']), int(self.var['blue_posup'])]
+            s.scn['gr_steps_down'] = [int(self.var['red_posdown']), int(self.var['blue_posdown'])]
+
+        # minimum steps is 1
+        if s.scn['gr_steps_up'][0] < 1:
+            s.scn['gr_steps_up'][0] = int(1)
+        if s.scn['gr_steps_up'][1] < 1:
+            s.scn['gr_steps_up'][1] = int(1)
+
+        s.scn['ramplength'] = [self.var['red_ramplen'], self.var['blue_ramplen']]
+        s.scn['ch_scheme'] = self.var['ch_scheme']
+        s.scn['chopcoord_system'] = self.var['chopcoord_system']
+        s.scn['chop_amp'] = self.var['chop_amp']
+        s.scn['ch_tip'] = self.var['chop_tip']
+        s.scn['ch_beam'] = 1
+        s.scn['chop_posang'] = self.var['chop_posang']
+        s.scn['ch_cycles'] = [self.var['red_chopcyc'], self.var['blue_chopcyc']]
+        if self.var['chopphase'] == 'Default':
+            s.scn['chop_manualphase'] = self.chop_phase_default
+        elif  self.var['chopphase'] == 'Manual':
+            s.scn['chop_manualphase'] = self.var['chop_manualphase']
+        s.scn['chop_length'] = self.var['chop_length']
+        s.scn['sel_cap'] = [self.var['red_capacitor'], self.var['blue_capacitor']]
+        s.scn['zero_bias'] = [self.var['red_zbias'], self.var['blue_zbias']]
+        #bluezerobiasold = s.scn['zero_bias'][1]
+        if s.scn['zero_bias'][1] == 90:
+            s.scn['zero_bias'][1] = 75
+        if s.scn['zero_bias'][0] == 50 and s.scn['zero_bias'][1] == 90:
+            s.scn['zero_bias'][0] = 60
+        s.scn['biasr'] = [self.var['red_biasr'], self.var['blue_biasr']]
+        s.scn['heater'] = [0, 0]
+        s.scn['cal_src_temp'] = 0.
+
+    def exportSct(self):
+        """
+        Write a scan template file *.sct to local disk.
+        """
+        # Create dictionary
+        sctPars = {}
+        for key in self.k2tw:
+            label = self.k2tw[key]
+            if isinstance(label, QLineEdit):
+                try:
+                    sctPars[key] = label.text()
+                except:
+                    print(key + 'is unkown.')
+            elif isinstance(label, QComboBox):
+                try:
+                    sctPars[key] = label.currentText()
+                except:
+                    print(key + 'is unkown.')
+            else:  # No widget, just variable
+                if key == 'MAPLISTPATH':
+                    # Save the file name only
+                    sctPars[key] = os.path.basename(self.mapListPath)
+                else:
+                    print('Unknown key ',key)
+        # Call writing routine
+        writeSct(sctPars)
         
 class ScanDescription(QObject):
     """ Scan Description class """
