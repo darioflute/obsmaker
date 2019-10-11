@@ -1,0 +1,33 @@
+{% set name = "obsmaker" %}
+{% set data = load_setup_py_data() %}
+
+package:
+  name: "{{ name|lower }}"
+  version: "{{ data.get('version') }}"
+
+source:
+  git_tag: master
+  git_url: https://github.com/darioflute/obsmaker.git
+
+build:
+  
+requirements:
+  build:
+    - setuptools
+    - python
+    - pandas
+
+  run:
+    - python
+    - numpy >=1.11
+    - pandas >=0.25
+        
+test:
+  imports:
+    - obsmaker
+
+about:
+  home: https://github.com/darioflute/obsmaker
+  license: GPL3
+  license_file: LICENSE
+  description: 'Package to produce scan descrition from AOR files for FIFI-LS observations.'
