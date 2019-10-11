@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QPushButton, QWidget, QTabWidget,QVBoxLayout, QHBoxLayout, QComboBox,
-                             QLabel, QLineEdit, QFormLayout)
+                             QLabel, QLineEdit, QFormLayout, QMessageBox)
 from PyQt5.QtCore import Qt, QObject
 import os
 import math
@@ -416,14 +416,18 @@ class TableWidget(QWidget):
         """
         Save GUI parameters and calculate observation.
         """
-        self.writeObservation.setEnabled(False)
-        self.gui2vars()
-        self.calculate()
-        self.var['ind_scanindex'] = 0
-        self.var['commandline_option'] = '0' # No command line option for the moment
-        print('Observation built')
-        self.writeObservation.setEnabled(True)           
-
+        try:
+            self.writeObservation.setEnabled(False)
+            self.gui2vars()
+            self.calculate()
+            self.var['ind_scanindex'] = 0
+            self.var['commandline_option'] = '0' # No command line option for the moment
+            print('Observation built')
+            self.writeObservation.setEnabled(True)           
+        except:
+            message = 'Upload a template before building the observation.'
+            QMessageBox.about(self, "Build", message)
+            print(message)
             
     def gui2vars(self):
         """
