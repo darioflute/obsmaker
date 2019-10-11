@@ -5,7 +5,7 @@ import os
 import math
 import numpy as np
 from obsmaker.grating import inductosyn2wavelength, wavelength2inductosyn
-from obsmaker.io import velocity2z, writeSct
+from obsmaker.io import velocity2z, writeSct, readMap
 
 def mround(number, multiple):
     """
@@ -75,11 +75,14 @@ class TableWidget(QWidget):
         self.targetDec = self.createEditableBox('+00 00 00.0', 40, 'Target Dec: ', c1)
         self.redshift = self.createEditableBox('0', 40, 'Redshift [z]: ', c1)
         self.detectorAngle = self.createEditableBox('0', 40, 'Detector angle (E of N): ', c1)
-        observingmodes = ["Symmetric", "Asymmetric"]
+        self.observingmodes = ["Symmetric", "Asymmetric"]
         #observingmodes = ["Beam switching", "Unmatched nodding"]
-        self.observingMode = self.addComboBox('Observing mode: ', observingmodes, c1)
+        self.observingMode = self.addComboBox('Observing mode: ', self.observingmodes, c1)
+        self.observingMode.currentIndexChanged.connect(self.obsModeChange)
         self.instrumentalMode = self.addComboBox('Instrumental mode: ', self.instmodes, c1)
-        self.primaryArray = self.addComboBox('Primary array: ', ["Red", "Blue", "Setpoint"], c1)
+        self.primaryArrays = ["RED", "BLUE", "cmd"]
+        self.primaryArray = self.addComboBox('Primary array: ', self.primaryArrays, c1)
+        self.primaryArray.currentIndexChanged.connect(self.primaryArrayChange)
         self.setpoint = self.createEditableBox('n/a', 40, 'Setpoint: ', c1)
         self.col1.layout.addRow(QLabel('Observing stats'),None)
         self.rawIntTime = self.createEditableBox('', 40, 'Raw integration time (s): ', c1)
@@ -88,28 +91,38 @@ class TableWidget(QWidget):
         # Col 2
         c2 = self.col2.layout
         c2.addRow(QLabel('Nod Pattern'),None)
-        nodpatterns = ['ABBA','AB','A','ABA','AABAA']
-        self.nodPattern = self.addComboBox('Nod pattern: ', nodpatterns, c2)
-        self.nodcyclesPerMapPosition = self.createEditableBox('1', 20, 'Nod cycles per map position: ', c2)
-        self.gratingDirection = self.addComboBox('Grating direction: ', ['Up','Down','None','Split'], c2)
+        self.nodpatterns = ['ABBA','AB','A','ABA','AABAA']
+        self.nodPattern = self.addComboBox('Nod pattern: ', self.nodpatterns, c2)
+        self.nodPattern.currentIndexChanged.connect(self.nodPatternChange)
+        self.nodcyclesPerMapPositionLabel = self.addLabel('Nod cycles per map position: ')
+        self.nodcyclesPerMapPosition = QLineEdit('1')
+        c2.addRow(self.nodcyclesPerMapPositionLabel,self.nodcyclesPerMapPosition)
+        self.gratingDirections = ['Up','Down','None','Split']
+        self.gratingDirection = self.addComboBox('Grating direction: ', self.gratingDirections, c2)
+        self.gratingDirection.currentIndexChanged.connect(self.gratingDirectionChange)
         self.scanFilesPerSplit = self.createEditableBox('n/a', 40, 'Scan files per split: ', c2)
         self.rewindMode = self.addComboBox('LOS rewind mode: ', ['Auto', 'Manual'], c2)
 
         c2.addRow(QLabel('Off position'),None)
-        items = ['Matched', 'Absolute', 'Relative to target', 'Relative to active map pos']
-        self.offPosition = self.addComboBox('Off position: ', items, c2)
-        self.lambdaOffPos = self.createEditableBox('', 40, 'Off Position Lambda [arcsec]: ',c2)
-        self.betaOffPos = self.createEditableBox('', 40, 'Off Position Beta [arcsec]: ', c2)
-        self.mapOffPos = self.createEditableBox('', 40, 'Off Position map reduction: ', c2)
+        self.offpositions = ['Matched', 'Absolute', 'Relative to target', 'Relative to active map pos']
+        self.offPosition = self.addComboBox('Off position: ', self.offpositions, c2)
+        self.lambdaOffPosLabel = self.addLabel('Lambda [arcsec]: ')
+        self.lambdaOffPos = QLineEdit('') 
+        c2.addRow(self.lambdaOffPosLabel,self.lambdaOffPos)
+        self.betaOffPosLabel = self.addLabel('Beta [arcsec]: ')
+        self.betaOffPos = QLineEdit('') 
+        c2.addRow(self.betaOffPosLabel,self.betaOffPos)
+        self.mapOffPos = self.createEditableBox('', 40, 'Offpos map reduction: ', c2)
         c2.addRow(QLabel('Mapping pattern'),None)
         c2.addRow(QLabel('Map center offset from target'),None)
         self.coordSysMap = self.addComboBox('Coordinate system: ', self.mapcoordsys, c2)        
-        self.lambdaMapCenter = self.createEditableBox('', 40, 'Lambda [arcsec]: ', c2)
-        self.betaMapCenter = self.createEditableBox('', 40, 'Beta [arcsec]: ', c2)
-        self.mapPattern = self.addComboBox('Mapping pattern: ', ['File', 'Manual'], c2)        
-        self.noMapPoints = self.createEditableBox('', 40,'No of map points: ',c2)
-        self.mapStepSize = self.createEditableBox('', 40, 'Step size [arcsec]: ', c2)
-        self.loadMapPatternFile= self.createButton('Load file')
+        self.lambdaMapCenter = self.createEditableBox('0', 40, 'Lambda [arcsec]: ', c2)
+        self.betaMapCenter = self.createEditableBox('0', 40, 'Beta [arcsec]: ', c2)
+        self.mapPattern = self.addComboBox('Mapping pattern: ', self.refpatterns, c2)
+        self.mapPattern.currentIndexChanged.connect(self.mapPatternChange)
+        self.noMapPoints = self.createEditableBox('1', 40,'No of map points: ',c2)
+        self.mapStepSize = self.createEditableBox('n/a', 40, 'Step size [arcsec]: ', c2)
+        self.loadMapPatternFile = self.createButton('Load file')
         c2.addRow(QLabel('Mapping pattern: '), self.loadMapPatternFile)
         
         # Col 3
@@ -132,6 +145,7 @@ class TableWidget(QWidget):
         self.noGratPosChop = self.createEditableBox('', 40, 'No of grating positions:  ', c3)
         self.totGratPositions = self.createEditableBox('1', 40, 'Total no of mapping positions: ', c3)
         self.chopCompute = self.createButton('Compute')
+        self.chopCompute.setEnabled(False)
         self.chopCompute.clicked.connect(self.grating_xls)
         c3.addRow(self.chopCompute, None)
         self.nodCycles = self.createEditableBox('', 40, 'No of nod cycles: ', c3)
@@ -213,12 +227,27 @@ class TableWidget(QWidget):
         # Define conversion
         self.defineConversion()
         
+        # First conversion
+        self.gui2vars()
+        
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
         
     def blueLineChange(self, index):
         """If new line selected, populate the wavelength."""
         self.blueWave.setText(str(self.bluewaves[index]))
+        # Select best order
+        wave = float(self.blueWave.text())
+        if wave < 71.:
+            order = '2'
+            bfilter = '2'
+        else:
+            order = '1'
+            bfilter = '1'
+        index = self.setOrder.findText(order, Qt.MatchFixedString)
+        self.setOrder.setCurrentIndex(index)
+        index = self.setFilter.findText(bfilter, Qt.MatchFixedString)
+        self.setFilter.setCurrentIndex(index)
         
     def redLineChange(self, index):
         """If new line selected, populate the wavelength."""
@@ -228,6 +257,214 @@ class TableWidget(QWidget):
         """Put default phase value is default is selected."""
         if index == 0:
             self.chopPhase.setText(str(self.chop_phase_default))
+            
+    def obsModeChange(self, index):
+        """Reaction to change of obsMode."""
+        obsmode = self.observingmodes[index]
+        if obsmode == 'Symmetric':
+            self.var['offpos'] = 'Matched'
+            self.var['symmetry'] = 'Symmetric'
+            index = self.instrumentalMode.findText('SYMMETRIC_CHOP', Qt.MatchFixedString)
+            self.instrumentalMode.setCurrentIndex(index)
+            index = self.offPosition.findText('Matched', Qt.MatchFixedString)
+            self.offPosition.setCurrentIndex(index)
+            # disable labels and entryboxes beneath
+            self.lambdaOffPos.setReadOnly(True)
+            self.betaOffPos.setReadOnly(True)
+            self.mapOffPos.setReadOnly(True)
+            # disable Tracking in B buttons
+            index = self.trackingInB.findText('On', Qt.MatchFixedString)
+            self.trackingInB.setCurrentIndex(index)
+            self.trackingInB.setEnabled(False)
+        else:
+            self.var['offpos'] = 'Relative to target'
+            self.var['symmetry'] = 'Asymmetric'
+            index = self.instrumentalMode.findText('ASYMMETRIC_CHOP', Qt.MatchFixedString)
+            self.instrumentalMode.setCurrentIndex(index)
+            index = self.offPosition.findText('Relative to target', Qt.MatchFixedString)
+            self.offPosition.setCurrentIndex(index)
+            # enable labels and entryboxes beneath
+            self.lambdaOffPos.setReadOnly(False)
+            self.betaOffPos.setReadOnly(False)
+            self.mapOffPos.setReadOnly(False)
+            # enable Tracking in B buttons
+            index = self.trackingInB.findText('Off', Qt.MatchFixedString)
+            self.trackingInB.setCurrentIndex(index)
+            self.trackingInB.setEnabled(True)
+            
+    def primaryArrayChange(self, index):
+        """Changes with switch of primary array."""
+        self.var['primaryarray'] =  self.primaryArrays[index]
+        if self.var['primaryarray'] == 'RED':
+            self.var['commandline_option'] = '0'
+            self.setpoint.setText('n/a')
+            self.setpoint.setReadOnly(True)
+        elif self.var['primaryarray'] == 'BLUE':
+            self.var['commandline_option'] = '0'
+            self.setpoint.setText('n/a')
+            self.setpoint.setReadOnly(True)
+        elif self.var['primaryarray'] == 'cmd':
+            self.var['commandline_option'] = '1'
+            self.setpoint.setReadOnly(False)
+            self.setpoint.setText('Input argument here')
+        
+    def nodPatternChange(self, index):
+        """When changing nod pattern."""    
+        self.var['nodpattern'] = self.nodpatterns[index]
+        if self.var['nodpattern'] in ['AB', 'ABBA', 'A']:
+            self.nodcyclesPerMapPositionLabel.setText('Nod cycles per map position (n): ')
+            self.nodcyclesPerMapPosition.setReadOnly(False)
+        elif self.var['nodpattern'] in ['ABA', 'AABAA']:
+            self.nodcyclesPerMapPositionLabel.setText('Number of A positions per B (n): ')
+            if self.var['nodpattern'] == 'ABA':
+                self.nodcyclesPerMapPosition.setText('2')
+            else:
+                self.nodcyclesPerMapPosition.setText('4')
+                self.nodcyclesPerMapPosition.setReadOnly(False)
+        if self.var['nodpattern'] == 'A':
+            self.chopAmp.setText('0')
+            obstype = 'SKY'
+        else:
+            self.chopAmp.setText('60')
+            obstype = 'OBJECT'
+        index = self.setOrder.findText(obstype, Qt.MatchFixedString)
+        self.observationType.setCurrentIndex(index)
+    
+    def gratingDirectionChange(self, index):
+        """When changing grating scan direction."""
+        self.var['scandist'] = self.gratingDirections[index]
+        if self.var['scandist'] in ['Up', 'Down']:
+            self.scanFilesPerSplit.setText('')
+            self.scanFilesPerSplit.setReadOnly(True)
+            index = self.redGratPattern.findText('Inward dither', Qt.MatchFixedString)
+            self.redGratPattern.setCurrentIndex(index)
+            self.blueGratPattern.setCurrentIndex(index)
+            if self.var['scandist'] == 'Up':
+                self.redStepSizeUp.setText('0')
+                self.redGratPosUp.setText('1')
+                self.redStepSizeDown.setText('0')
+                self.redGratPosDown.setText('0')
+                self.blueStepSizeUp.setText('0')
+                self.blueGratPosUp.setText('1')
+                self.blueStepSizeDown.setText('0')
+                self.blueGratPosDown.setText('0')
+                self.redStepSizeUp.setReadOnly(False)            
+                self.redGratPosUp.setReadOnly(False)    
+                self.redStepSizeDown.setReadOnly(True)
+                self.redGratPosDown.setReadOnly(True)
+                self.blueStepSizeUp.setReadOnly(False)                   
+                self.blueGratPosUp.setReadOnly(False)
+                self.blueStepSizeDown.setReadOnly(True)
+                self.blueGratPosDown.setReadOnly(True)
+            elif self.var['scandist'] == 'Down':
+                self.redStepSizeUp.setText('0')
+                self.redGratPosUp.setText('0')
+                self.redStepSizeDown.setText('0')
+                self.redGratPosDown.setText('1')
+                self.blueStepSizeUp.setText('0')
+                self.blueGratPosUp.setText('0')
+                self.blueStepSizeDown.setText('0')
+                self.blueGratPosDown.setText('1')
+                self.redStepSizeUp.setReadOnly(True)               
+                self.redGratPosUp.setReadOnly(True)
+                self.redStepSizeDown.setReadOnly(False)
+                self.redGratPosDown.setReadOnly(False) 
+                self.blueStepSizeUp.setReadOnly(True)           
+                self.blueGratPosUp.setReadOnly(True)
+                self.blueStepSizeDown.setReadOnly(False)
+                self.blueGratPosDown.setReadOnly(False)
+        elif self.var['scandist'] in ['None', 'Split']:
+            if self.var['scandist'] == 'None':
+                self.scanFilesPerSplit.setText('')
+                self.scanFilesPerSplit.setReadOnly(True)       
+            else:
+                self.scanFilesPerSplit.setReadOnly(False)
+            # if grating movement pattern is not Centre or Start, set it to Centre
+            if self.redGratPattern.currentText() not in ['Centre', 'Start']:
+                index = self.redGratPattern.findText('Centre', Qt.MatchFixedString)
+                self.redGratPattern.setCurrentIndex(index)
+            if self.blueGratPattern.currentText() not in ['Centre', 'Start']:
+                index = self.blueGratPattern.findText('Centre', Qt.MatchFixedString)
+                self.blueGratPattern.setCurrentIndex(index)
+            self.redStepSizeUp.setText('0')
+            self.redGratPosUp.setText('1')
+            self.redStepSizeDown.setText('0')
+            self.redGratPosDown.setText('0')
+            self.blueStepSizeUp.setText('0')
+            self.blueGratPosUp.setText('1')
+            self.blueStepSizeDown.setText('0')
+            self.blueGratPosDown.setText('0')
+            self.redStepSizeUp.setReadOnly(False)             
+            self.redGratPosUp.setReadOnly(False)
+            self.redStepSizeDown.setReadOnly(False)
+            self.redGratPosDown.setReadOnly(False)
+            self.blueStepSizeUp.setReadOnly(False)             
+            self.blueGratPosUp.setReadOnly(False)
+            self.blueStepSizeDown.setReadOnly(False)
+            self.blueGratPosDown.setReadOnly(False)
+        
+    def offPosChange(self, index):
+        """Offset position changed."""
+        self.var['offpos'] = self.offpositions[index]
+        if self.var['offpos'] == 'Matched':
+            self.lambdaOffPosLabel.setText('Lambda [arcsec]: ')
+            self.betaOffPosLabel.setText('Beta [arcsec]: ')
+            self.mapOffPos.setText('1')
+            self.mapOffPos.setReadOnly(True)
+        elif self.var['offpos'] == 'Absolute':
+            self.lambdaOffPosLabel.setText('Lambda [RA decimal degs]:')
+            self.betaOffPosLabel.setText('Beta [Dec decimal degs]:')
+            self.mapOffPos.setReadOnly(True)
+        elif self.var['offpos'] == 'Relative to target':
+            self.lambdaOffPosLabel.setText('Lambda [arcsec]: ')
+            self.betaOffPosLabel.setText('Beta [arcsec]: ')
+            self.mapOffPos.setReadOnly(True)
+        elif self.var['offpos'] == 'Relative to active map pos':
+            self.lambdaOffPosLabel.setText('Lambda [arcsec]: ')
+            self.betaOffPosLabel.setText('Beta [arcsec]: ')
+            self.mapOffPos.setText('1')
+            self.mapOffPos.setReadOnly(False)
+
+    def loadMapFile(self):
+        """Load a map file."""
+        try:
+            noMapPoints, mapListPath = readMap()
+            self.mapListPath = mapListPath
+            self.noMapPoints.setText(str(noMapPoints))
+        except:
+            print('Invalid map file.')  
+
+    def mapPatternChange(self, index):
+        """Mapping pattern changed."""
+        self.var['pattern'] = self.refpatterns[index]
+        if self.var['pattern'] == 'File':
+            self.noMapPoints.setText('1')
+            self.mapStepSize.setText('n/a')
+            self.noMapPoints.setEnabled(False)
+            self.mapStepSize.setEnabled(False)
+            self.loadMapPatternFile.setEnabled(True)
+            # Lunch load button
+            self.loadMapFile()
+        elif self.var['pattern'] == 'Stare':
+            self.loadMapPatternFile.setEnabled(False)
+            self.noMapPoints.setEnabled(True)
+            self.mapStepSize.setEnabled(True)
+            self.noMapPoints.setText('1')
+            self.mapStepSize.setText('n/a')
+        elif self.var['pattern'] == 'N-point cross':
+            self.loadMapPatternFile.setEnabled(False)
+            self.noMapPoints.setEnabled(True)
+            self.mapStepSize.setEnabled(True)
+            self.noMapPoints.setText('multiple of 4 + 1')
+            self.mapStepSize.setText('n/a')
+        elif self.var['pattern'] in ['Spiral', 'Inward spiral']:
+            self.loadMapPatternFile.setEnabled(False)
+            self.noMapPoints.setEnabled(True)
+            self.mapStepSize.setEnabled(True)
+            self.noMapPoints.setText('Odd square number')
+            self.mapStepSize.setText('1')
+        else:
+            print(self.var['pattern'], ' is not yet supported.')
 
     def readDefaults(self):  
         """Read input file with defaults."""
@@ -389,7 +626,10 @@ class TableWidget(QWidget):
             label = self.k2tw[key]
             if isinstance(label, QLineEdit):
                 try:
-                    label.setText(aorPars[key])
+                    if key == 'REDSHIFT':
+                        label.setText("{0:.6f}".format(float(aorPars[key])))
+                    else:
+                        label.setText(aorPars[key])
                 except:
                     print(key + 'is unkown.')
             elif isinstance(label, QComboBox):
@@ -400,10 +640,9 @@ class TableWidget(QWidget):
                     print(key + 'is unkown.')
             else:  # No widget, just variable
                 if key == 'MAPLISTPATH':
-                    maplistpath = os.path.join(self.pathFile, aorPars[key])
                     # self.k2tw[key] = maplistpath # does not work ...
-                    self.mapListPath = maplistpath
-                    print('Map file is in: ', maplistpath)
+                    self.mapListPath = aorPars[key]
+                    #print('Map file is in: ', maplistpath)
                 else:
                     print('Unknown key ',key)
 
@@ -423,7 +662,8 @@ class TableWidget(QWidget):
             self.var['ind_scanindex'] = 0
             self.var['commandline_option'] = '0' # No command line option for the moment
             print('Observation built')
-            self.writeObservation.setEnabled(True)           
+            self.writeObservation.setEnabled(True) 
+            self.chopCompute.setEnabled(True)
         except:
             message = 'Upload a template before building the observation.'
             QMessageBox.about(self, "Build", message)
@@ -490,15 +730,20 @@ class TableWidget(QWidget):
         
         for item in ints:
             # in case any are float, convert str -> float -> int
-            self.var[item] = int(float(self.var[item]))
+            try:
+                self.var[item] = int(float(self.var[item]))
+            except:
+                self.var[item] = 0
         for item in flts:
-            self.var[item] = float(self.var[item])
+            try:
+                self.var[item] = float(self.var[item])
+            except:
+                self.var[item] = 0.0
             
         # get any other values from the GUI
         self.var['ch_scheme'] = self.chopScheme.currentText()
         self.var['symmetry'] = self.observingMode.currentText()
-        # self.var['scandesdir'] = self.e_scandesdir.get()  # Directory to put scd files
-        self.var['scandesdir'] = '.'  # Same directory where the AOR files are read
+        self.var['scandesdir'] = self.pathFile  # Same directory where the AOR files are read
         
         # calculate any "support" variables needed
         self.var['target_lambda_hms'] = self.var['target_lambda']
@@ -1266,19 +1511,16 @@ class TableWidget(QWidget):
         """
         Called by compute button.
         """
-        t_int_source = self.onSourceTimeChop.text()
-        n_grating_pos = self.noGratPosChop.text()
-        n_map_pts = self.totGratPositions.text()
-        self.var['nodcycles'] = int(self.nodcyclesPerMapPosition.text())
 
         # sanity check - if entry boxes are empty, return
         try:
-            t_int_source = float(t_int_source)
-            n_grating_pos = float(n_grating_pos)
-            n_map_pts = float(n_map_pts)
+            t_int_source = int(self.onSourceTimeChop.text())
+            n_grating_pos = int(self.noGratPosChop.text())
+            n_map_pts = int(self.totGratPositions.text())
+            self.var['nodcycles'] = int(self.nodcyclesPerMapPosition.text())
         except ValueError:
-            print('ERROR: Please enter ' +
-            'non-zero values for On-source time and # of grating positions.\n')
+            message = 'Please enter non-zero values for on-source time and number of grating positions.'
+            QMessageBox.about(self, "Grating", message)
             return
 
         # check for zero values
@@ -1342,9 +1584,9 @@ class TableWidget(QWidget):
             t_map = t_total * n_map_pts / 60.
 
             # update GUI
-            self.nodCycles.setText(str(n_nod_cycles))
-            self.noGratPos4Nod.setText(str(n_grating_pos_per_nod))
-            self.gratCycle4Nod.setText(str(t_nod_grating))
+            self.nodCycles.setText("{0:.1f}".format(round(n_nod_cycles)))
+            self.noGratPos4Nod.setText("{0:.1f}".format(n_grating_pos_per_nod))
+            self.gratCycle4Nod.setText("{0:.1f}".format(t_nod_grating))
         # Common updates
         self.ccPerGratPos.setText(str(n_cc_per_grating_pos))
         self.timeCompleteMap.setText("{0:.2f}".format(round(t_map,2)))
@@ -1624,6 +1866,8 @@ class TableWidget(QWidget):
         s.scn['dichroic'] = self.var['dichroic']
         s.scn['order'] = self.var['order']
         s.scn['blue_filter'] = self.var['blue_filter']
+        s.scn['blue_micron'] = self.var['blue_micron']
+        s.scn['red_micron'] = self.var['red_micron']        
         s.scn['gr_cycles'] = [self.var['red_grtcyc'], self.var['blue_grtcyc']]
         s.scn['gr_stepsize_up'] = [
             int(self.var['red_sizeup_isu']),
@@ -2100,6 +2344,9 @@ class ScanDescription(QObject):
         file.write('%s%s%s' % ("G_WAVE_B".ljust(12),
             str("%.3f" % self.scn['gr_lambda'][1]).ljust(15),
             '# Wavelength to be observed in um INFO ONLY\n'))
+        file.write('%s%s%s' % ("RESTWAVB".ljust(12),
+            str("%.3f" % self.scn['blue_micron']).ljust(15),
+            '# Reference wavelength in um\n'))
         file.write('%s%s%s' % ("G_CYC_B".ljust(12),
             str(self.scn['gr_cycles'][1]).ljust(15),
             '# The number of grating cycles (up-down)\n'))
@@ -2122,6 +2369,9 @@ class ScanDescription(QObject):
         file.write('%s%s%s' % ("G_WAVE_R".ljust(12),
             str("%.3f" % self.scn['gr_lambda'][0]).ljust(15),
             '# Wavelength to be observed in um INFO ONLY\n'))
+        file.write('%s%s%s' % ("RESTWAVR".ljust(12),
+            str("%.3f" % self.scn['red_micron']).ljust(15),
+            '# Reference wavelength in um\n'))
         file.write('%s%s%s' % ("G_CYC_R".ljust(12),
             str(self.scn['gr_cycles'][0]).ljust(15),
             '# The number of grating cycles (up-down)\n'))

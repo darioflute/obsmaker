@@ -428,7 +428,6 @@ def writeSct(sctPars):
     """
     Write a *.sct file from a dictionary.
     """
-    # Open a dialog
     fd = QFileDialog()
     fd.setLabelText(QFileDialog.Accept, "Export as")
     fd.setNameFilters(["Scan description (*.sct)", "All Files (*)"])
@@ -442,12 +441,14 @@ def writeSct(sctPars):
         print("Exporting scan description to file: ", filename)
         with io.open(filename, mode='w') as f:
             for key in sctPars.keys():
-                f.write("{0:25s}#{1:s}\n".format(key.upper(),sctPars[key]))
+                f.write("{0:25s}#{1:s}\n".format(sctPars[key], key.upper()))
     print('File '+filename+' exported.')
     
     
 def readMap(filename=None):
-    
+    """
+    Import alternate map file.
+    """
     if filename is None:
         fd = QFileDialog()
         fd.setLabelText(QFileDialog.Accept, "Import")
