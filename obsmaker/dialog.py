@@ -235,19 +235,25 @@ class TableWidget(QWidget):
         
     def blueLineChange(self, index):
         """If new line selected, populate the wavelength."""
+        if self.blueLine.currentText()  == 'Custom':
+            return
         self.blueWave.setText(str(self.bluewaves[index]))
         # Select best order
+        print('current order ',self.setOrder.currentText())
         wave = float(self.blueWave.text())
+        print('wave is ', wave)
         if wave < 71.:
             order = '2'
             bfilter = '2'
         else:
             order = '1'
             bfilter = '1'
+        print('order ', order)
         index = self.setOrder.findText(order, Qt.MatchFixedString)
         self.setOrder.setCurrentIndex(index)
         index = self.setFilter.findText(bfilter, Qt.MatchFixedString)
         self.setFilter.setCurrentIndex(index)
+        print('updated order ',self.setOrder.currentText())
         
     def redLineChange(self, index):
         """If new line selected, populate the wavelength."""
@@ -636,6 +642,8 @@ class TableWidget(QWidget):
                 try:
                     index = label.findText(aorPars[key], Qt.MatchFixedString)
                     label.setCurrentIndex(index)
+                    if key == 'ORDER':
+                        print('Order ', aorPars[key], index, label.currentText())
                 except:
                     print(key + 'is unkown.')
             else:  # No widget, just variable
