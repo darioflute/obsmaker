@@ -29,7 +29,7 @@ class TableWidget(QWidget):
         
         # Read defaults
         self.readDefaults()
-        self.pathFile = './'
+        self.pathFile = ''
         
         # Initialize tab screen
         self.tabs = QTabWidget()
@@ -143,7 +143,7 @@ class TableWidget(QWidget):
         c3.addRow(QLabel('Input params per mapping position'),None)
         self.onSourceTimeChop = self.createEditableBox('', 40, 'On-source time: ', c3)
         self.noGratPosChop = self.createEditableBox('', 40, 'No of grating positions:  ', c3)
-        self.totGratPositions = self.createEditableBox('1', 40, 'Total no of mapping positions: ', c3)
+        self.totMapPositions = self.createEditableBox('1', 40, 'Total no of mapping positions: ', c3)
         self.chopCompute = self.createButton('Compute')
         self.chopCompute.setEnabled(False)
         self.chopCompute.clicked.connect(self.grating_xls)
@@ -233,6 +233,15 @@ class TableWidget(QWidget):
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
         
+    def setDefaults(self):
+        self.chopPhaseChange(0)
+        self.obsModeChange(0)
+        self.primaryArrayChange(0)
+        self.nodPatternChange(0)
+        self.gratingDirectionChange(0)
+        self.offPosChange(0)
+        self.mapPatternChange(0, readFile=False)
+        
     def blueLineChange(self, index):
         """If new line selected, populate the wavelength."""
         if self.blueLine.currentText()  == 'Custom':
@@ -278,6 +287,9 @@ class TableWidget(QWidget):
             self.lambdaOffPos.setReadOnly(True)
             self.betaOffPos.setReadOnly(True)
             self.mapOffPos.setReadOnly(True)
+            self.lambdaOffPos.setEnabled(False)
+            self.betaOffPos.setEnabled(False)
+            self.mapOffPos.setEnabled(False)
             # disable Tracking in B buttons
             index = self.trackingInB.findText('On', Qt.MatchFixedString)
             self.trackingInB.setCurrentIndex(index)
@@ -293,6 +305,10 @@ class TableWidget(QWidget):
             self.lambdaOffPos.setReadOnly(False)
             self.betaOffPos.setReadOnly(False)
             self.mapOffPos.setReadOnly(False)
+            self.lambdaOffPos.setEnabled(True)
+            self.betaOffPos.setEnabled(True)
+            self.mapOffPos.setEnabled(True)
+            
             # enable Tracking in B buttons
             index = self.trackingInB.findText('Off', Qt.MatchFixedString)
             self.trackingInB.setCurrentIndex(index)
@@ -305,14 +321,17 @@ class TableWidget(QWidget):
             self.var['commandline_option'] = '0'
             self.setpoint.setText('n/a')
             self.setpoint.setReadOnly(True)
+            self.setpoint.setEnabled(False)
         elif self.var['primaryarray'] == 'BLUE':
             self.var['commandline_option'] = '0'
             self.setpoint.setText('n/a')
             self.setpoint.setReadOnly(True)
+            self.setpoint.setEnabled(False)
         elif self.var['primaryarray'] == 'cmd':
             self.var['commandline_option'] = '1'
             self.setpoint.setReadOnly(False)
             self.setpoint.setText('Input argument here')
+            self.setpoint.setEnabled(False)
         
     def nodPatternChange(self, index):
         """When changing nod pattern."""    
@@ -440,7 +459,7 @@ class TableWidget(QWidget):
         except:
             print('Invalid map file.')  
 
-    def mapPatternChange(self, index):
+    def mapPatternChange(self, index, readFile=True):
         """Mapping pattern changed."""
         self.var['pattern'] = self.refpatterns[index]
         if self.var['pattern'] == 'File':
@@ -450,7 +469,8 @@ class TableWidget(QWidget):
             self.mapStepSize.setEnabled(False)
             self.loadMapPatternFile.setEnabled(True)
             # Lunch load button
-            self.loadMapFile()
+            if readFile:
+                self.loadMapFile()
         elif self.var['pattern'] == 'Stare':
             self.loadMapPatternFile.setEnabled(False)
             self.noMapPoints.setEnabled(True)
@@ -498,6 +518,8 @@ class TableWidget(QWidget):
         self.t_grating_move = config["t_grating_move"]
         self.f_chop = config["f_chop"]
         self.chop_phase_default = config["chop_phase_default"]
+        self.obs_con_samplesize = config["obs_con_samplesize"]
+        print("sample size is: ", self.obs_con_samplesize)
         
     def add2widgets(self, text, widget1, widget2, layout):
         box = QWidget()
@@ -633,7 +655,7 @@ class TableWidget(QWidget):
             if isinstance(label, QLineEdit):
                 try:
                     if key == 'REDSHIFT':
-                        label.setText("{0:.6f}".format(float(aorPars[key])))
+                        label.setText("{0:.10f}".format(float(aorPars[key])))
                     else:
                         label.setText(aorPars[key])
                 except:
@@ -656,14 +678,20 @@ class TableWidget(QWidget):
 
         # Check if chopper phase mode is default and put default value
         if aorPars['CHOPPHASE'] == 'Default' :
-            self.chopPhase.setText(str(self.chop_phase_default))
-
+            self.chopPhase.setText(str(self.chop_phase_default))            
+        # Update number of points in map
+        self.totMapPositions.setText(aorPars['DITHMAP_NUMPOINTS'])
+        self.totMapPositions.setEnabled(False)
 
     def buildObs(self):
         """
         Save GUI parameters and calculate observation.
         """
         try:
+            if self.pathFile == '':
+                message = 'Upload a template before building the observation.'
+                QMessageBox.about(self, "Build", message)
+                return                
             self.writeObservation.setEnabled(False)
             self.gui2vars()
             self.calculate()
@@ -805,7 +833,8 @@ class TableWidget(QWidget):
         """
         Calculate time estimates, set chopper values.
         """
-        obs_con_samplesize = 250.0  #250.0 SOFIA clock, 256.0 lab clock
+        #obs_con_samplesize = 250.0  #250.0 SOFIA clock, 256.0 lab clock
+        obs_con_samplesize = self.obs_con_samplesize
         if self.var['chop_amp'] == 0.0:
             obs_con_chopeff = 1.0
         else:
@@ -915,11 +944,11 @@ class TableWidget(QWidget):
         
         # Update GUI
         # Ramp length in ms
-        self.redRampLengthMs.setText(str(red_ramplen_ms))
-        self.blueRampLengthMs.setText(str(blue_ramplen_ms))
+        self.redRampLengthMs.setText('{0:.2f}'.format(round(red_ramplen_ms, 2)))
+        self.blueRampLengthMs.setText('{0:.2f}'.format(round(blue_ramplen_ms, 2)))
         # Fill Scan file length (s), red and blue
-        self.redScanFileLength.setText(str(red_scantime_ms / 1000.))
-        self.blueScanFileLength.setText(str(blue_scantime_ms / 1000.))
+        self.redScanFileLength.setText('{0:.2f}'.format(round(red_scantime_ms / 1000., 2)))
+        self.blueScanFileLength.setText('{0:.2f}'.format(round(blue_scantime_ms / 1000., 2)))
         # Fill Ramps per chop pos, red and blue_rampsperchoppos
         self.redRamp4ChopPos.setText(str(red_rampsperchoppos))
         self.blueRamp4ChopPos.setText(str(blue_rampsperchoppos))
@@ -949,6 +978,8 @@ class TableWidget(QWidget):
                 result = self.calcStare()
                 if result == False:
                     return
+                
+        print('num list points is: ', self.var['numlistpoints'])
 
         if self.var['nodpattern'] in ['ABA','AABAA']:
             nodmultiplier = math.ceil(self.var['numlistpoints'] / self.var['nodcycles'])
@@ -966,19 +997,19 @@ class TableWidget(QWidget):
             self.var['chop_tip'] = 1.0
 
         # Compute raw integration time - use the longest scan time between both channels
-        npts = self.var['numlistpoints'] 
         if red_scantime_ms >= blue_scantime_ms:
-            if self.var['nodpattern'] in ['ABA', 'AABAA']:
-                rawtime_ms = (npts +  nodmultiplier) * red_scantime_ms
-            else:  # 'AB', 'ABBA', and 'A'
-                rawtime_ms = npts * red_scantime_ms * nodmultiplier
+            scantime_ms = red_scantime_ms
         else:
-            if self.var['nodpattern'] in ['ABA', 'AABAA']:
-                rawtime_ms = (npts + nodmultiplier) * blue_scantime_ms
-            else:  # 'AB', 'ABBA', and 'A'
-                rawtime_ms = npts * blue_scantime_ms * nodmultiplier
+            scantime_ms = blue_scantime_ms
+        print('scantime in ms: ', scantime_ms)
+        npts = self.var['numlistpoints'] 
+        if self.var['nodpattern'] in ['ABA', 'AABAA']:
+            rawtime_ms = (npts +  nodmultiplier) * scantime_ms
+        else:  # 'AB', 'ABBA', and 'A'
+            rawtime_ms = npts * scantime_ms * nodmultiplier
         rawtime_sec = rawtime_ms / 1000.
         # update GUI
+        print('numlistpts ', npts, ' nodmult ', nodmultiplier)
         print('integration time ', rawtime_sec)
         self.rawIntTime.setText(str("%.1f" % rawtime_sec))
 
@@ -1069,7 +1100,7 @@ class TableWidget(QWidget):
             self.var['map_beta'] = map_beta
             self.var['nod_lambda'] = nod_lambda
             self.var['nod_beta'] = nod_beta
-            self.var['numlistpoints'] = cnt - 1
+            self.var['numlistpoints'] = cnt
         except:
             print('Problems to read map file ..')
             return False                                        
@@ -1459,10 +1490,10 @@ class TableWidget(QWidget):
         # Compute values
         gratpos = np.array(self.var['red_grstart'])
         l, w = inductosyn2wavelength(gratpos, self.var['dichroic'], 'RED', 1)
-        self.var['red_lambdastart'] = l[:,8,12]
+        self.var['red_lambdastart'] = np.mean(l)
         gratpos = np.array(self.var['blue_grstart'])
         l, w = inductosyn2wavelength(gratpos, self.var['dichroic'], 'BLUE', self.var['order'])
-        self.var['blue_lambdastart'] = l[:,8,12]
+        self.var['blue_lambdastart'] = np.mean(l)
 
     def calcInductosynPos(self):
         """ Convert input wavelength to inductosyn units and update GUI."""
@@ -1478,6 +1509,7 @@ class TableWidget(QWidget):
                 self.var['redshift'] = velocity2z(self.var['red_offset'])
             xt = xt * (1.0 + self.var['redshift'])
         print('Requested red wavelength: ' + str(xt))
+        self.redGratPosMicron.setText('{0:.4f}'.format(round(xt,4)))
         grtpos = wavelength2inductosyn(xt, self.var['dichroic'], 'RED', 1, obsdate='')
         self.var['red_grtpos'] = int(grtpos)
         if self.var['red_offset_type'] == 'units' and self.var['red_offset'] != 0:
@@ -1487,7 +1519,8 @@ class TableWidget(QWidget):
                                 dichroic = self.var['dichroic'], array = 'RED',
                                 order = 1,  # RED channel only operates in 1st order
                                 obsdate = '')
-            red_micron_actual = l[0,8,12]
+            #red_micron_actual = l[0,8,12]
+            red_micron_actual = np.mean(l[0,:,:])
             self.redGratPosMicron.setText(str(red_micron_actual).strip())
         self.redGratPosUnits.setText(str(self.var['red_grtpos']))
         
@@ -1502,6 +1535,7 @@ class TableWidget(QWidget):
                 self.var['redshift'] = velocity2z(self.var['blue_offset'])
             xt = xt * (1.0 + self.var['redshift'])
         print('Requested blue wavelength: ' + str(xt))
+        self.blueGratPosMicron.setText('{0:.4f}'.format(round(xt,4)))
         grtpos = wavelength2inductosyn(xt, self.var['dichroic'], 'BLUE', self.var['order'], obsdate='')
         self.var['blue_grtpos'] = int(grtpos)
         if self.var['blue_offset_type'] == 'units' and self.var['blue_offset'] != 0:
@@ -1511,7 +1545,8 @@ class TableWidget(QWidget):
                                 dichroic = self.var['dichroic'], array = 'BLUE',
                                 order = self.var['order'],  # RED channel only operates in 1st order
                                 obsdate = '')
-            blue_micron_actual = l[0,8,12]
+            #blue_micron_actual = l[0,8,12]
+            blue_micron_actual = np.mean(l[0,:,:])
             self.blueGratPosMicron.setText(str(blue_micron_actual).strip())
         self.blueGratPosUnits.setText(str(self.var['blue_grtpos']))
 
@@ -1524,7 +1559,7 @@ class TableWidget(QWidget):
         try:
             t_int_source = int(self.onSourceTimeChop.text())
             n_grating_pos = int(self.noGratPosChop.text())
-            n_map_pts = int(self.totGratPositions.text())
+            n_map_pts = int(self.totMapPositions.text())
             self.var['nodcycles'] = int(self.nodcyclesPerMapPosition.text())
         except ValueError:
             message = 'Please enter non-zero values for on-source time and number of grating positions.'
@@ -1596,12 +1631,12 @@ class TableWidget(QWidget):
             self.noGratPos4Nod.setText("{0:.1f}".format(n_grating_pos_per_nod))
             self.gratCycle4Nod.setText("{0:.1f}".format(t_nod_grating))
         # Common updates
-        self.ccPerGratPos.setText(str(n_cc_per_grating_pos))
+        self.ccPerGratPos.setText("{0:.2f}".format(round(n_cc_per_grating_pos,2)))
         self.timeCompleteMap.setText("{0:.2f}".format(round(t_map,2)))
         self.redGratPosUp.setText("{0:.0f}".format(round(n_grating_pos,0)))
         self.blueGratPosUp.setText("{0:.0f}".format(round(n_grating_pos,0)))
-        self.blueCC4ChopPos.setText(str(n_cc_per_grating_pos))  # Missing in previous version
-        self.redCC4ChopPos.setText(str(n_cc_per_grating_pos))
+        self.blueCC4ChopPos.setText("{0:.0f}".format(round(n_cc_per_grating_pos,0)))  # Missing in previous version
+        self.redCC4ChopPos.setText("{0:.0f}".format(round(n_cc_per_grating_pos,0)))
         
     def writeObs(self):
         """

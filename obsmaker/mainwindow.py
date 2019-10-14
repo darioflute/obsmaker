@@ -104,6 +104,8 @@ class GUI(QMainWindow):
         if (fd.exec()):
             fileName= fd.selectedFiles()
             sctfile = fileName[0]
+            # Default settings
+            self.TW.setDefaults()
             # Load template and update table widget
             self.aorParameters = readSct(sctfile)
             self.TW.update(self.aorParameters)
@@ -119,6 +121,8 @@ class GUI(QMainWindow):
                     self.TW.noMapPoints.setText(str(noMapPoints))
                 except:
                     print('Invalid map file.')
+            # First build
+            self.TW.buildObs()
                     
     def loadMapFile(self):
         """Load a map file."""

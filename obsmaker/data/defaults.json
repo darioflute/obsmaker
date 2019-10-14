@@ -62,6 +62,7 @@
 "t_grating_move" : 0.0,
 "obs_eff" : 0.5,
 "f_chop" : 2.0,
-"chop_phase_default": 356
-
+"chop_phase_default": 356,
+"_comment": "250.0 SOFIA clock, 256.0 lab clock",
+"obs_con_samplesize": 250.0
 }
