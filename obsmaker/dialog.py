@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import (QPushButton, QWidget, QTabWidget,QVBoxLayout, QHBoxLayout, QComboBox,
                              QLabel, QLineEdit, QFormLayout, QMessageBox)
 from PyQt5.QtCore import Qt, QObject
+from PyQt5.QtGui import QIntValidator, QDoubleValidator
 import os
 import math
 import numpy as np
@@ -73,8 +74,9 @@ class TableWidget(QWidget):
         self.targetName = self.createEditableBox('None', 40, 'Target name: ', c1)
         self.targetRA = self.createEditableBox('00 00 00.0', 40, 'Target RA: ', c1)
         self.targetDec = self.createEditableBox('+00 00 00.0', 40, 'Target Dec: ', c1)
-        self.redshift = self.createEditableBox('0', 40, 'Redshift [z]: ', c1)
-        self.detectorAngle = self.createEditableBox('0', 40, 'Detector angle (E of N): ', c1)
+        self.redshift = self.createEditableBox('0', 40, 'Redshift [z]: ', c1, 'double')
+        self.detectorAngle = self.createEditableBox('0', 40, 'Detector angle (E of N): ', 
+                                                    c1, QDoubleValidator())
         self.observingmodes = ["Symmetric", "Asymmetric"]
         #observingmodes = ["Beam switching", "Unmatched nodding"]
         self.observingMode = self.addComboBox('Observing mode: ', self.observingmodes, c1)
@@ -85,7 +87,7 @@ class TableWidget(QWidget):
         self.primaryArray.currentIndexChanged.connect(self.primaryArrayChange)
         self.setpoint = self.createEditableBox('n/a', 40, 'Setpoint: ', c1)
         self.col1.layout.addRow(QLabel('Observing stats'),None)
-        self.rawIntTime = self.createEditableBox('', 40, 'Raw integration time (s): ', c1)
+        self.rawIntTime = self.createEditableBox('', 40, 'Raw integration time (s): ', c1, 'double')
         self.onsourceIntTime = self.createEditableBox('', 40, 'On source integration time (s): ', c1)
         self.estObsTime = self.createEditableBox('', 40, 'Estimated observation time (s): ', c1)
         # Col 2
@@ -94,9 +96,7 @@ class TableWidget(QWidget):
         self.nodpatterns = ['ABBA','AB','A','ABA','AABAA']
         self.nodPattern = self.addComboBox('Nod pattern: ', self.nodpatterns, c2)
         self.nodPattern.currentIndexChanged.connect(self.nodPatternChange)
-        self.nodcyclesPerMapPositionLabel = self.addLabel('Nod cycles per map position: ')
-        self.nodcyclesPerMapPosition = QLineEdit('1')
-        c2.addRow(self.nodcyclesPerMapPositionLabel,self.nodcyclesPerMapPosition)
+        self.nodcyclesPerMapPosition = self.createEditableBox('1', 40, 'Nod cycles per map position: ', c2, 'int')
         self.gratingDirections = ['Up','Down','None','Split']
         self.gratingDirection = self.addComboBox('Grating direction: ', self.gratingDirections, c2)
         self.gratingDirection.currentIndexChanged.connect(self.gratingDirectionChange)
@@ -106,21 +106,18 @@ class TableWidget(QWidget):
         c2.addRow(QLabel('Off position'),None)
         self.offpositions = ['Matched', 'Absolute', 'Relative to target', 'Relative to active map pos']
         self.offPosition = self.addComboBox('Off position: ', self.offpositions, c2)
-        self.lambdaOffPosLabel = self.addLabel('Lambda [arcsec]: ')
-        self.lambdaOffPos = QLineEdit('') 
-        c2.addRow(self.lambdaOffPosLabel,self.lambdaOffPos)
-        self.betaOffPosLabel = self.addLabel('Beta [arcsec]: ')
-        self.betaOffPos = QLineEdit('') 
-        c2.addRow(self.betaOffPosLabel,self.betaOffPos)
+        self.offPosition.currentIndexChanged.connect(self.offPosChange)
+        self.lambdaOffPos = self.createEditableBox('', 40, 'Lambda [arcsec]:', c2, 'double')
+        self.betaOffPos = self.createEditableBox('', 40, 'Beta [arcsec]:', c2, 'double')
         self.mapOffPos = self.createEditableBox('', 40, 'Offpos map reduction: ', c2)
         c2.addRow(QLabel('Mapping pattern'),None)
         c2.addRow(QLabel('Map center offset from target'),None)
         self.coordSysMap = self.addComboBox('Coordinate system: ', self.mapcoordsys, c2)        
-        self.lambdaMapCenter = self.createEditableBox('0', 40, 'Lambda [arcsec]: ', c2)
-        self.betaMapCenter = self.createEditableBox('0', 40, 'Beta [arcsec]: ', c2)
+        self.lambdaMapCenter = self.createEditableBox('0', 40, 'Lambda [arcsec]: ', c2, 'double')
+        self.betaMapCenter = self.createEditableBox('0', 40, 'Beta [arcsec]: ', c2, 'double')
         self.mapPattern = self.addComboBox('Mapping pattern: ', self.refpatterns, c2)
         self.mapPattern.currentIndexChanged.connect(self.mapPatternChange)
-        self.noMapPoints = self.createEditableBox('1', 40,'No of map points: ',c2)
+        self.noMapPoints = self.createEditableBox('1', 40,'No of map points: ',c2, 'int')
         self.mapStepSize = self.createEditableBox('n/a', 40, 'Step size [arcsec]: ', c2)
         self.loadMapPatternFile = self.createButton('Load file')
         c2.addRow(QLabel('Mapping pattern: '), self.loadMapPatternFile)
@@ -130,20 +127,20 @@ class TableWidget(QWidget):
         c3.addRow(QLabel('Chopper setup'),None)
         self.chopScheme = self.addComboBox('Chop scheme: ', self.chopschemes, c3)
         self.coordSysChop = self.addComboBox('Coordinate system: ', self.chopcoordsys, c3)        
-        self.chopAmp = self.createEditableBox('', 40,'Chop amplitude (1/2 throw): ', c3)        
-        self.chopPosAngle = self.createEditableBox('', 40,'Chop pos angle (S of E): ', c3)  
+        self.chopAmp = self.createEditableBox('', 40,'Chop amplitude (1/2 throw): ', c3, 'double')
+        self.chopPosAngle = self.createEditableBox('', 40,'Chop pos angle (S of E): ', c3, 'double')
         self.chopPhase = self.createEditableBox(str(self.chop_phase_default), 40)
         self.chopPhaseMode = QComboBox()
         self.chopPhaseMode.addItems(["Default", "Manual"])
         self.chopPhaseMode.currentIndexChanged.connect(self.chopPhaseChange)
         self.add2widgets('Chopper Phase: ', self.chopPhaseMode, self.chopPhase, c3)
-        self.chopLengthFrequency = self.createEditableBox('', 40, 'Chop frequency [Hz] ', c3)
-        self.chopLengthSamples = self.createEditableBox('64', 40, 'Chop samples per position ', c3)
+        self.chopLengthFrequency = self.createEditableBox('', 40, 'Chop frequency [Hz] ', c3, 'double')
+        self.chopLengthSamples = self.createEditableBox('64', 40, 'Chop samples per position ', c3, 'double')
         self.trackingInB = self.addComboBox('Tracking in B (asymmetric): ', ['On', 'Off'], c3) 
         c3.addRow(QLabel('Input params per mapping position'),None)
-        self.onSourceTimeChop = self.createEditableBox('', 40, 'On-source time: ', c3)
-        self.noGratPosChop = self.createEditableBox('', 40, 'No of grating positions:  ', c3)
-        self.totMapPositions = self.createEditableBox('1', 40, 'Total no of mapping positions: ', c3)
+        self.onSourceTimeChop = self.createEditableBox('', 40, 'On-source time: ', c3, 'double')
+        self.noGratPosChop = self.createEditableBox('', 40, 'No of grating positions:  ', c3, 'int')
+        self.totMapPositions = self.createEditableBox('1', 40, 'Total no of mapping positions: ', c3, 'int')
         self.chopCompute = self.createButton('Compute')
         self.chopCompute.setEnabled(False)
         self.chopCompute.clicked.connect(self.grating_xls)
@@ -167,7 +164,7 @@ class TableWidget(QWidget):
         self.setDichroic = self.addComboBox('Dichroic: ', ['105', '130'], c4)
         c4.addRow(QLabel(''),None)
         self.redLine = self.addComboBox('Line: ', self.redlines, c4)
-        self.redWave = self.createEditableBox('', 50, 'Wavelength [um]', c4)
+        self.redWave = self.createEditableBox('', 50, 'Wavelength [um]', c4, 'double')
         self.redLine.currentIndexChanged.connect(self.redLineChange)
         self.redOffsetUnits = QComboBox()
         self.redOffsetUnits.addItems(["kms", "um", "units"])
@@ -177,10 +174,10 @@ class TableWidget(QWidget):
         self.redGratPosUnits = self.createEditableBox('', 50, 'Grating position [unit]: ', c4)
         c4.addRow(QLabel('Spectral mode'),None)
         self.redGratPattern = self.addComboBox('Grating movement pattern: ', self.gratpatterns, c4)
-        self.redStepSizeUp = self.createEditableBox('0', 40, 'Step size up [pixels]: ', c4)
-        self.redGratPosUp = self.createEditableBox('1', 40, 'Grating position up: ', c4)
-        self.redStepSizeDown = self.createEditableBox('0', 40, 'Step size down [pixels]: ', c4)
-        self.redGratPosDown = self.createEditableBox('0', 40, 'Grating position down: ', c4)
+        self.redStepSizeUp = self.createEditableBox('0', 40, 'Step size up [pixels]: ', c4, 'double')
+        self.redGratPosUp = self.createEditableBox('1', 40, 'Grating position up: ', c4, 'int')
+        self.redStepSizeDown = self.createEditableBox('0', 40, 'Step size down [pixels]: ', c4, 'double')
+        self.redGratPosDown = self.createEditableBox('0', 40, 'Grating position down: ', c4, 'int')
         c4.addRow(QLabel('Timing and sensitivity'),None)
         self.redRampLengthSamples = self.createEditableBox('32', 40, 'Ramp length [samples]: ', c4)
         self.redRampLengthMs = self.createEditableBox('32', 40, 'Ramp length [ms]: ', c4)
@@ -337,10 +334,10 @@ class TableWidget(QWidget):
         """When changing nod pattern."""    
         self.var['nodpattern'] = self.nodpatterns[index]
         if self.var['nodpattern'] in ['AB', 'ABBA', 'A']:
-            self.nodcyclesPerMapPositionLabel.setText('Nod cycles per map position (n): ')
+            self.nodcyclesPerMapPosition.label.setText('Nod cycles per map position (n): ')
             self.nodcyclesPerMapPosition.setReadOnly(False)
         elif self.var['nodpattern'] in ['ABA', 'AABAA']:
-            self.nodcyclesPerMapPositionLabel.setText('Number of A positions per B (n): ')
+            self.nodcyclesPerMapPosition.label.setText('Number of A positions per B (n): ')
             if self.var['nodpattern'] == 'ABA':
                 self.nodcyclesPerMapPosition.setText('2')
             else:
@@ -432,21 +429,22 @@ class TableWidget(QWidget):
         """Offset position changed."""
         self.var['offpos'] = self.offpositions[index]
         if self.var['offpos'] == 'Matched':
-            self.lambdaOffPosLabel.setText('Lambda [arcsec]: ')
-            self.betaOffPosLabel.setText('Beta [arcsec]: ')
+            self.lambdaOffPos.label.setText('Lambda [arcsec]: ')
+            self.betaOffPos.label.setText('Beta [arcsec]: ')
             self.mapOffPos.setText('1')
             self.mapOffPos.setReadOnly(True)
         elif self.var['offpos'] == 'Absolute':
-            self.lambdaOffPosLabel.setText('Lambda [RA decimal degs]:')
-            self.betaOffPosLabel.setText('Beta [Dec decimal degs]:')
+            print('label text is ', self.lambdaOffPos.label.text())
+            self.lambdaOffPos.label.setText('Lambda [RA decimal degs]:')
+            self.betaOffPos.label.setText('Beta [Dec decimal degs]:')
             self.mapOffPos.setReadOnly(True)
         elif self.var['offpos'] == 'Relative to target':
-            self.lambdaOffPosLabel.setText('Lambda [arcsec]: ')
-            self.betaOffPosLabel.setText('Beta [arcsec]: ')
+            self.lambdaOffPos.label.setText('Lambda [arcsec]: ')
+            self.betaOffPos.label.setText('Beta [arcsec]: ')
             self.mapOffPos.setReadOnly(True)
         elif self.var['offpos'] == 'Relative to active map pos':
-            self.lambdaOffPosLabel.setText('Lambda [arcsec]: ')
-            self.betaOffPosLabel.setText('Beta [arcsec]: ')
+            self.lambdaOffPos.label.setText('Lambda [arcsec]: ')
+            self.betaOffPos.label.setText('Beta [arcsec]: ')
             self.mapOffPos.setText('1')
             self.mapOffPos.setReadOnly(False)
 
@@ -533,15 +531,22 @@ class TableWidget(QWidget):
         a = QComboBox()
         a.addItems(items)
         if layout is not None:
-            layout.addRow(QLabel(text), a)
+            a.label = QLabel(text)
+            layout.addRow(a.label, a)
         return a
         
-    def createEditableBox(self, text, size, label='None', layout=None):
+    def createEditableBox(self, text, size, label='', layout=None, validator=None):
         box = QLineEdit(text)
         #box.setText(text)
         box.resize(size,40)
         if layout is not None:
-            layout.addRow(QLabel(label), box)
+            box.label = QLabel(label)
+            layout.addRow(box.label, box)
+        if validator is not None:
+            if validator == 'int':
+                box.setValidator(QIntValidator())
+            elif validator == 'double':
+                box.setValidator(QDoubleValidator())
         return box
         
     def createWidget(self, direction, layout=None):
@@ -849,10 +854,12 @@ class TableWidget(QWidget):
         # time per grating position in samples, red and blue_ramplen_ms
         red_grtpostime_sam = self.var['red_chopcyc'] * chopcyctime_sam
         blue_grtpostime_sam = self.var['blue_chopcyc'] * chopcyctime_sam
+        print('red chop cycle ',self.var['red_chopcyc'])
         # number of total grating positions = up + down, red and blue
         self.var['red_numgrtpos'] = self.var['red_posup'] + self.var['red_posdown']
         self.var['blue_numgrtpos'] = self.var['blue_posup'] + self.var['blue_posdown']
         # time per grading cycle in samples
+        print('red number of grat pos ', self.var['red_numgrtpos'])
         red_grtcyctime_sam = self.var['red_numgrtpos'] * red_grtpostime_sam
         blue_grtcyctime_sam = self.var['blue_numgrtpos'] * blue_grtpostime_sam
 
@@ -1023,6 +1030,7 @@ class TableWidget(QWidget):
                 symfactor = 2.
             sourcetime_sam = npts * nodmultiplier / symfactor * red_scantime_src_sam
         sourcetime_sec = float(sourcetime_sam / obs_con_samplesize)
+        print('time on source [s]: ', sourcetime_sec)
         self.onsourceIntTime.setText(str("%.1f" % sourcetime_sec))
 
         # Compute observation time including overheads
@@ -1637,6 +1645,9 @@ class TableWidget(QWidget):
         self.blueGratPosUp.setText("{0:.0f}".format(round(n_grating_pos,0)))
         self.blueCC4ChopPos.setText("{0:.0f}".format(round(n_cc_per_grating_pos,0)))  # Missing in previous version
         self.redCC4ChopPos.setText("{0:.0f}".format(round(n_cc_per_grating_pos,0)))
+        
+        # Automatic build
+        self.buildObs()
         
     def writeObs(self):
         """
