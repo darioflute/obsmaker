@@ -84,7 +84,7 @@ class TableWidget(QWidget):
         self.primaryArrays = ["RED", "BLUE", "cmd"]
         self.primaryArray = addComboBox('Primary array: ', self.primaryArrays, c1)
         self.primaryArray.currentIndexChanged.connect(self.primaryArrayChange)
-        self.setpoint = createEditableBox('n/a', 40, 'Setpoint: ', c1)
+        self.setpoint = createEditableBox('', 40, 'Set setpoint: ', c1)
         self.col1.layout.addRow(QLabel('Observing stats'),None)
         self.rawIntTime = createEditableBox('', 40, 'Raw integration time (s): ', c1, 'double')
         self.onsourceIntTime = createEditableBox('', 40, 'On source integration time (s): ', c1)
@@ -135,7 +135,7 @@ class TableWidget(QWidget):
         add2widgets('Chopper Phase: ', self.chopPhaseMode, self.chopPhase, c3)
         self.chopLengthFrequency = createEditableBox('', 40, 'Chop frequency [Hz] ', c3, 'double')
         self.chopLengthSamples = createEditableBox('64', 40, 'Chop samples per position ', c3, 'double')
-        self.trackingInB = addComboBox('Tracking in B (asymmetric): ', ['On', 'Off'], c3) 
+        self.trackingInB = addComboBox('Tracking in pos B: ', ['On', 'Off'], c3) 
         c3.addRow(QLabel('Input params per mapping position'),None)
         self.onSourceTimeChop = createEditableBox('', 40, 'On-source time: ', c3, 'double')
         self.noGratPosChop = createEditableBox('', 40, 'No of grating positions:  ', c3, 'int')
@@ -229,6 +229,9 @@ class TableWidget(QWidget):
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
         
+        # Defaults
+        self.setDefaults()
+        
     def setDefaults(self):
         self.chopPhaseChange(0)
         self.obsModeChange(0)
@@ -289,7 +292,9 @@ class TableWidget(QWidget):
             # disable Tracking in B buttons
             index = self.trackingInB.findText('On', Qt.MatchFixedString)
             self.trackingInB.setCurrentIndex(index)
-            self.trackingInB.setEnabled(False)
+            self.trackingInB.hide()
+            self.trackingInB.label.hide()
+            #self.trackingInB.setEnabled(False)
         else:
             self.var['offpos'] = 'Relative to target'
             self.var['symmetry'] = 'Asymmetric'
@@ -304,30 +309,39 @@ class TableWidget(QWidget):
             self.lambdaOffPos.setEnabled(True)
             self.betaOffPos.setEnabled(True)
             self.mapOffPos.setEnabled(True)
-            
             # enable Tracking in B buttons
             index = self.trackingInB.findText('Off', Qt.MatchFixedString)
             self.trackingInB.setCurrentIndex(index)
-            self.trackingInB.setEnabled(True)
+            self.trackingInB.show()
+            self.trackingInB.label.show()
+            #self.trackingInB.setEnabled(True)
             
     def primaryArrayChange(self, index):
         """Changes with switch of primary array."""
         self.var['primaryarray'] =  self.primaryArrays[index]
+        print('new array is ', self.var['primaryarray'])
         if self.var['primaryarray'] == 'RED':
             self.var['commandline_option'] = '0'
             self.setpoint.setText('n/a')
-            self.setpoint.setReadOnly(True)
-            self.setpoint.setEnabled(False)
+            #self.setpoint.setReadOnly(True)
+            #self.setpoint.setEnabled(False)
+            self.setpoint.hide()
+            self.setpoint.label.hide()
         elif self.var['primaryarray'] == 'BLUE':
             self.var['commandline_option'] = '0'
             self.setpoint.setText('n/a')
-            self.setpoint.setReadOnly(True)
-            self.setpoint.setEnabled(False)
+            #self.setpoint.setReadOnly(True)
+            #self.setpoint.setEnabled(False)
+            self.setpoint.hide()
+            self.setpoint.label.hide()
         elif self.var['primaryarray'] == 'cmd':
             self.var['commandline_option'] = '1'
-            self.setpoint.setReadOnly(False)
-            self.setpoint.setText('Input argument here')
-            self.setpoint.setEnabled(False)
+            #self.setpoint.setReadOnly(False)
+            self.setpoint.setText('')
+            #self.setpoint.setEnabled(False)
+            self.setpoint.show()
+            self.setpoint.label.show()
+
         
     def nodPatternChange(self, index):
         """When changing nod pattern."""    
@@ -516,7 +530,6 @@ class TableWidget(QWidget):
         self.f_chop = config["f_chop"]
         self.chop_phase_default = config["chop_phase_default"]
         self.obs_con_samplesize = config["obs_con_samplesize"]
-        print("sample size is: ", self.obs_con_samplesize)
             
     def defineConversion(self):
         self.k2tw = {

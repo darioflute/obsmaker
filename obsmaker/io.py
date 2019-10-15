@@ -480,6 +480,7 @@ def readSct(filename):
                 line = line.rstrip('\n') 
                 (val, key) = line.split('#')
                 parameters[key.strip()] = val.strip()
+        print(filename, ' read.')
         return parameters
     except:
         print("This is not a *.sct file")
@@ -523,14 +524,12 @@ def readMap(filename=None):
             filename = fileNames[0]
     else:
         pass
-    print('Reading map ', filename)
-    with open(filename) as file:
-        for i, l in enumerate(file):
-            continue
-    numlines = i + 1
+    numlines = sum(1 for line in open(filename))
     if numlines < 2:
         print('Map file is empty.')
         return
+    else:
+        print('Map has ', numlines, ' lines.')
     # read the first line - target coords in HH:MM:SS.SS, DD:MM:SS.SS
     file = open(filename)
     line = file.readline()
@@ -538,7 +537,6 @@ def readMap(filename=None):
         print('File is not a map file.')
         return
     file.close()
-
     mapListPath = filename
     numMapPoints = numlines - 1 
     return numMapPoints, mapListPath    

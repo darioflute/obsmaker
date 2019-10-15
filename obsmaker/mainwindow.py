@@ -115,14 +115,18 @@ class GUI(QMainWindow):
             self.TW.pathFile = sctpath
             self.TW.mapListPath = os.path.join(sctpath, mapfile)
             mapfile = self.TW.mapListPath
+            print('mapfile ', mapfile)
             if len(mapfile) > 0:
                 try:
                     noMapPoints, mapListPath = readMap(mapfile)
+                    print('map path ', mapListPath)
                     self.TW.mapListPath = mapListPath
                     self.TW.noMapPoints.setText(str(noMapPoints))
+                    print('map loaded')
                 except:
                     print('Invalid map file.')
             # First build
+            print('First build ')
             self.TW.buildObs()
                     
     def loadMapFile(self):
