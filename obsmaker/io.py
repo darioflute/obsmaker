@@ -3,7 +3,68 @@ import io
 import math
 import json
 import numpy as np
-from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import (QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
+                             QLabel, QLineEdit, QFormLayout, QFileDialog)
+from PyQt5.QtGui import QIntValidator, QDoubleValidator
+from PyQt5.QtCore import Qt
+
+
+def add2widgets(text, widget1, widget2, layout):
+    box = QWidget()
+    box.layout = QHBoxLayout(box)
+    box.layout.setContentsMargins(0, 0, 0, 0)
+    box.layout.addWidget(widget1)
+    box.layout.addWidget(widget2)
+    layout.addRow(QLabel(text), box)
+        
+def addComboBox(text, items, layout=None):
+    a = QComboBox()
+    a.addItems(items)
+    if layout is not None:
+        a.label = QLabel(text)
+        layout.addRow(a.label, a)
+    return a
+        
+def createEditableBox(text, size, label='', layout=None, validator=None):
+    box = QLineEdit(text)
+    box.resize(size,40)
+    if layout is not None:
+        box.label = QLabel(label)
+        layout.addRow(box.label, box)
+    if validator is not None:
+        if validator == 'int':
+            box.setValidator(QIntValidator())
+        elif validator == 'double':
+            box.setValidator(QDoubleValidator())
+    return box
+        
+def createWidget(direction, layout=None):
+    a = QWidget()
+    if direction == 'H':
+        a.layout = QHBoxLayout(a)
+    elif direction == 'V':
+        a.layout = QVBoxLayout(a)
+    elif direction == 'F':
+        a.layout = QFormLayout(a)
+        a.layout.setLabelAlignment(Qt.AlignLeft)
+        a.layout.setAlignment(Qt.AlignLeft)
+    if layout is not None:
+        layout.addWidget(a)
+    return a
+    
+def createButton(action, layout=None):
+    a = QPushButton(action)
+    if layout is not None:
+        layout.addWidget(a)
+    return a
+    
+def addLabel(text, layout=None):
+    label = QLabel()
+    label.setText(text)
+    label.setAlignment(Qt.AlignCenter)
+    if layout is not None:
+        layout.addWidget(label)
+    return label
 
 def replaceBadChar(string):
     """ replace some reserved characters with '_'

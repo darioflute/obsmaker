@@ -1,12 +1,12 @@
-from PyQt5.QtWidgets import (QPushButton, QWidget, QTabWidget,QVBoxLayout, QHBoxLayout, QComboBox,
-                             QLabel, QLineEdit, QFormLayout, QMessageBox)
+from PyQt5.QtWidgets import (QWidget, QTabWidget,QVBoxLayout, QComboBox, 
+                             QLabel, QLineEdit, QMessageBox)
 from PyQt5.QtCore import Qt, QObject
-from PyQt5.QtGui import QIntValidator, QDoubleValidator
 import os
 import math
 import numpy as np
 from obsmaker.grating import inductosyn2wavelength, wavelength2inductosyn
-from obsmaker.io import velocity2z, writeSct, readMap
+from obsmaker.io import (velocity2z, writeSct, readMap, add2widgets, addComboBox,
+                         createEditableBox, createWidget, createButton)
 
 def mround(number, multiple):
     """
@@ -34,192 +34,191 @@ class TableWidget(QWidget):
         
         # Initialize tab screen
         self.tabs = QTabWidget()
-        self.tab1 = self.createWidget('H')
-        self.tab2 = self.createWidget('H')
+        self.tab1 = createWidget('H')
+        self.tab2 = createWidget('H')
         
         # Add tabs
         self.tabs.addTab(self.tab1, "Telescope")
         self.tabs.addTab(self.tab2, "Arrays")
         
         # Telescope tab
-        self.col1 = self.createWidget('F', self.tab1.layout)
-        self.col2 = self.createWidget('F', self.tab1.layout)
-        self.col3 = self.createWidget('F', self.tab1.layout)
+        self.col1 = createWidget('F', self.tab1.layout)
+        self.col2 = createWidget('F', self.tab1.layout)
+        self.col3 = createWidget('F', self.tab1.layout)
         
         # Default
         self.mapListPath = ''
         
         # Col 1
         c1 = self.col1.layout
-        self.translateAOR = self.createButton('Load and translate AOR')
+        self.translateAOR = createButton('Load and translate AOR')
         c1.addRow(self.translateAOR,None)
-        self.loadTemplate = self.createButton('Load template')
-        self.exit = self.createButton('Exit ')
+        self.loadTemplate = createButton('Load template')
+        self.exit = createButton('Exit ')
         c1.addRow(self.loadTemplate, self.exit)
        
-        self.buildObservation = self.createButton('Build observation')
+        self.buildObservation = createButton('Build observation')
         self.buildObservation.clicked.connect(self.buildObs)
-        self.writeObservation = self.createButton('Write observation')
+        self.writeObservation = createButton('Write observation')
         self.writeObservation.clicked.connect(self.writeObs)
         self.writeObservation.setEnabled(False)
         c1.addRow(self.buildObservation, self.writeObservation)
 
-        self.observationID = self.createEditableBox("None", 40, "Observation ID: ", c1)
-        self.observationType = self.addComboBox('Observation type: ', self.obstypes, c1)
+        self.observationID = createEditableBox("None", 40, "Observation ID: ", c1)
+        self.observationType = addComboBox('Observation type: ', self.obstypes, c1)
        
-        self.filegpIDred = self.createEditableBox('None', 40, 'File Group ID Red: ', c1)
-        self.filegpIDblue = self.createEditableBox('None', 40, 'File Group ID Blue: ', c1)        
-        self.sourceType = self.addComboBox('Source type: ', self.sourcetypes, c1 )
-        self.aorID = self.createEditableBox('None', 40, 'AOR ID: ', c1)
-        self.targetName = self.createEditableBox('None', 40, 'Target name: ', c1)
-        self.targetRA = self.createEditableBox('00 00 00.0', 40, 'Target RA: ', c1)
-        self.targetDec = self.createEditableBox('+00 00 00.0', 40, 'Target Dec: ', c1)
-        self.redshift = self.createEditableBox('0', 40, 'Redshift [z]: ', c1, 'double')
-        self.detectorAngle = self.createEditableBox('0', 40, 'Detector angle (E of N): ', 
-                                                    c1, QDoubleValidator())
+        self.filegpIDred = createEditableBox('None', 40, 'File Group ID Red: ', c1)
+        self.filegpIDblue = createEditableBox('None', 40, 'File Group ID Blue: ', c1)        
+        self.sourceType = addComboBox('Source type: ', self.sourcetypes, c1 )
+        self.aorID = createEditableBox('None', 40, 'AOR ID: ', c1)
+        self.targetName = createEditableBox('None', 40, 'Target name: ', c1)
+        self.targetRA = createEditableBox('00 00 00.0', 40, 'Target RA: ', c1)
+        self.targetDec = createEditableBox('+00 00 00.0', 40, 'Target Dec: ', c1)
+        self.redshift = createEditableBox('0', 40, 'Redshift [z]: ', c1, 'double')
+        self.detectorAngle = createEditableBox('0', 40, 'Detector angle (E of N): ', c1, 'double')
         self.observingmodes = ["Symmetric", "Asymmetric"]
         #observingmodes = ["Beam switching", "Unmatched nodding"]
-        self.observingMode = self.addComboBox('Observing mode: ', self.observingmodes, c1)
+        self.observingMode = addComboBox('Observing mode: ', self.observingmodes, c1)
         self.observingMode.currentIndexChanged.connect(self.obsModeChange)
-        self.instrumentalMode = self.addComboBox('Instrumental mode: ', self.instmodes, c1)
+        self.instrumentalMode = addComboBox('Instrumental mode: ', self.instmodes, c1)
         self.primaryArrays = ["RED", "BLUE", "cmd"]
-        self.primaryArray = self.addComboBox('Primary array: ', self.primaryArrays, c1)
+        self.primaryArray = addComboBox('Primary array: ', self.primaryArrays, c1)
         self.primaryArray.currentIndexChanged.connect(self.primaryArrayChange)
-        self.setpoint = self.createEditableBox('n/a', 40, 'Setpoint: ', c1)
+        self.setpoint = createEditableBox('n/a', 40, 'Setpoint: ', c1)
         self.col1.layout.addRow(QLabel('Observing stats'),None)
-        self.rawIntTime = self.createEditableBox('', 40, 'Raw integration time (s): ', c1, 'double')
-        self.onsourceIntTime = self.createEditableBox('', 40, 'On source integration time (s): ', c1)
-        self.estObsTime = self.createEditableBox('', 40, 'Estimated observation time (s): ', c1)
+        self.rawIntTime = createEditableBox('', 40, 'Raw integration time (s): ', c1, 'double')
+        self.onsourceIntTime = createEditableBox('', 40, 'On source integration time (s): ', c1)
+        self.estObsTime = createEditableBox('', 40, 'Estimated observation time (s): ', c1)
         # Col 2
         c2 = self.col2.layout
         c2.addRow(QLabel('Nod Pattern'),None)
         self.nodpatterns = ['ABBA','AB','A','ABA','AABAA']
-        self.nodPattern = self.addComboBox('Nod pattern: ', self.nodpatterns, c2)
+        self.nodPattern = addComboBox('Nod pattern: ', self.nodpatterns, c2)
         self.nodPattern.currentIndexChanged.connect(self.nodPatternChange)
-        self.nodcyclesPerMapPosition = self.createEditableBox('1', 40, 'Nod cycles per map position: ', c2, 'int')
+        self.nodcyclesPerMapPosition = createEditableBox('1', 40, 'Nod cycles per map position: ', c2, 'int')
         self.gratingDirections = ['Up','Down','None','Split']
-        self.gratingDirection = self.addComboBox('Grating direction: ', self.gratingDirections, c2)
+        self.gratingDirection = addComboBox('Grating direction: ', self.gratingDirections, c2)
         self.gratingDirection.currentIndexChanged.connect(self.gratingDirectionChange)
-        self.scanFilesPerSplit = self.createEditableBox('n/a', 40, 'Scan files per split: ', c2)
-        self.rewindMode = self.addComboBox('LOS rewind mode: ', ['Auto', 'Manual'], c2)
+        self.scanFilesPerSplit = createEditableBox('n/a', 40, 'Scan files per split: ', c2)
+        self.rewindMode = addComboBox('LOS rewind mode: ', ['Auto', 'Manual'], c2)
 
         c2.addRow(QLabel('Off position'),None)
         self.offpositions = ['Matched', 'Absolute', 'Relative to target', 'Relative to active map pos']
-        self.offPosition = self.addComboBox('Off position: ', self.offpositions, c2)
+        self.offPosition = addComboBox('Off position: ', self.offpositions, c2)
         self.offPosition.currentIndexChanged.connect(self.offPosChange)
-        self.lambdaOffPos = self.createEditableBox('', 40, 'Lambda [arcsec]:', c2, 'double')
-        self.betaOffPos = self.createEditableBox('', 40, 'Beta [arcsec]:', c2, 'double')
-        self.mapOffPos = self.createEditableBox('', 40, 'Offpos map reduction: ', c2)
+        self.lambdaOffPos = createEditableBox('', 40, 'Lambda [arcsec]:', c2, 'double')
+        self.betaOffPos = createEditableBox('', 40, 'Beta [arcsec]:', c2, 'double')
+        self.mapOffPos = createEditableBox('', 40, 'Offpos map reduction: ', c2)
         c2.addRow(QLabel('Mapping pattern'),None)
         c2.addRow(QLabel('Map center offset from target'),None)
-        self.coordSysMap = self.addComboBox('Coordinate system: ', self.mapcoordsys, c2)        
-        self.lambdaMapCenter = self.createEditableBox('0', 40, 'Lambda [arcsec]: ', c2, 'double')
-        self.betaMapCenter = self.createEditableBox('0', 40, 'Beta [arcsec]: ', c2, 'double')
-        self.mapPattern = self.addComboBox('Mapping pattern: ', self.refpatterns, c2)
+        self.coordSysMap = addComboBox('Coordinate system: ', self.mapcoordsys, c2)        
+        self.lambdaMapCenter = createEditableBox('0', 40, 'Lambda [arcsec]: ', c2, 'double')
+        self.betaMapCenter = createEditableBox('0', 40, 'Beta [arcsec]: ', c2, 'double')
+        self.mapPattern = addComboBox('Mapping pattern: ', self.refpatterns, c2)
         self.mapPattern.currentIndexChanged.connect(self.mapPatternChange)
-        self.noMapPoints = self.createEditableBox('1', 40,'No of map points: ',c2, 'int')
-        self.mapStepSize = self.createEditableBox('n/a', 40, 'Step size [arcsec]: ', c2)
-        self.loadMapPatternFile = self.createButton('Load file')
+        self.noMapPoints = createEditableBox('1', 40,'No of map points: ',c2, 'int')
+        self.mapStepSize = createEditableBox('n/a', 40, 'Step size [arcsec]: ', c2)
+        self.loadMapPatternFile = createButton('Load file')
         c2.addRow(QLabel('Mapping pattern: '), self.loadMapPatternFile)
         
         # Col 3
         c3 = self.col3.layout
         c3.addRow(QLabel('Chopper setup'),None)
-        self.chopScheme = self.addComboBox('Chop scheme: ', self.chopschemes, c3)
-        self.coordSysChop = self.addComboBox('Coordinate system: ', self.chopcoordsys, c3)        
-        self.chopAmp = self.createEditableBox('', 40,'Chop amplitude (1/2 throw): ', c3, 'double')
-        self.chopPosAngle = self.createEditableBox('', 40,'Chop pos angle (S of E): ', c3, 'double')
-        self.chopPhase = self.createEditableBox(str(self.chop_phase_default), 40)
+        self.chopScheme = addComboBox('Chop scheme: ', self.chopschemes, c3)
+        self.coordSysChop = addComboBox('Coordinate system: ', self.chopcoordsys, c3)        
+        self.chopAmp = createEditableBox('', 40,'Chop amplitude (1/2 throw): ', c3, 'double')
+        self.chopPosAngle = createEditableBox('', 40,'Chop pos angle (S of E): ', c3, 'double')
+        self.chopPhase = createEditableBox(str(self.chop_phase_default), 40)
         self.chopPhaseMode = QComboBox()
         self.chopPhaseMode.addItems(["Default", "Manual"])
         self.chopPhaseMode.currentIndexChanged.connect(self.chopPhaseChange)
-        self.add2widgets('Chopper Phase: ', self.chopPhaseMode, self.chopPhase, c3)
-        self.chopLengthFrequency = self.createEditableBox('', 40, 'Chop frequency [Hz] ', c3, 'double')
-        self.chopLengthSamples = self.createEditableBox('64', 40, 'Chop samples per position ', c3, 'double')
-        self.trackingInB = self.addComboBox('Tracking in B (asymmetric): ', ['On', 'Off'], c3) 
+        add2widgets('Chopper Phase: ', self.chopPhaseMode, self.chopPhase, c3)
+        self.chopLengthFrequency = createEditableBox('', 40, 'Chop frequency [Hz] ', c3, 'double')
+        self.chopLengthSamples = createEditableBox('64', 40, 'Chop samples per position ', c3, 'double')
+        self.trackingInB = addComboBox('Tracking in B (asymmetric): ', ['On', 'Off'], c3) 
         c3.addRow(QLabel('Input params per mapping position'),None)
-        self.onSourceTimeChop = self.createEditableBox('', 40, 'On-source time: ', c3, 'double')
-        self.noGratPosChop = self.createEditableBox('', 40, 'No of grating positions:  ', c3, 'int')
-        self.totMapPositions = self.createEditableBox('1', 40, 'Total no of mapping positions: ', c3, 'int')
-        self.chopCompute = self.createButton('Compute')
+        self.onSourceTimeChop = createEditableBox('', 40, 'On-source time: ', c3, 'double')
+        self.noGratPosChop = createEditableBox('', 40, 'No of grating positions:  ', c3, 'int')
+        self.totMapPositions = createEditableBox('1', 40, 'Total no of mapping positions: ', c3, 'int')
+        self.chopCompute = createButton('Compute')
         self.chopCompute.setEnabled(False)
         self.chopCompute.clicked.connect(self.grating_xls)
         c3.addRow(self.chopCompute, None)
-        self.nodCycles = self.createEditableBox('', 40, 'No of nod cycles: ', c3)
-        self.ccPerGratPos = self.createEditableBox('', 40, 'No of CC per grating pos: ', c3)
-        self.loadScanDescriptionFile= self.createButton('Load file')
-        self.noGratPos4Nod = self.createEditableBox('', 40, 'No of grating pos per nod: ', c3)
-        self.gratCycle4Nod = self.createEditableBox('', 40, 'Grating cycle per nod (30.0): ', c3)
-        self.timeCompleteMap = self.createEditableBox('', 40, 'Time to complete map [min]: ', c3)
+        self.nodCycles = createEditableBox('', 40, 'No of nod cycles: ', c3)
+        self.ccPerGratPos = createEditableBox('', 40, 'No of CC per grating pos: ', c3)
+        self.loadScanDescriptionFile= createButton('Load file')
+        self.noGratPos4Nod = createEditableBox('', 40, 'No of grating pos per nod: ', c3)
+        self.gratCycle4Nod = createEditableBox('', 40, 'Grating cycle per nod (30.0): ', c3)
+        self.timeCompleteMap = createEditableBox('', 40, 'Time to complete map [min]: ', c3)
         #c3.addRow(QLabel('Scan description file: '), self.loadScanDescriptionFile)
         
         # Arrays tab
-        self.col4 = self.createWidget('F', self.tab2.layout)
-        self.col5 = self.createWidget('F', self.tab2.layout)
+        self.col4 = createWidget('F', self.tab2.layout)
+        self.col5 = createWidget('F', self.tab2.layout)
         
         # Column 4 (Red array)
         c4 = self.col4.layout
         self.gratpatterns = ['Centre', 'Dither', 'Inward dither', 'Start']
         c4.addRow(QLabel('Red Array.  [100-210 um]'),None)
-        self.setDichroic = self.addComboBox('Dichroic: ', ['105', '130'], c4)
+        self.setDichroic = addComboBox('Dichroic: ', ['105', '130'], c4)
         c4.addRow(QLabel(''),None)
-        self.redLine = self.addComboBox('Line: ', self.redlines, c4)
-        self.redWave = self.createEditableBox('', 50, 'Wavelength [um]', c4, 'double')
+        self.redLine = addComboBox('Line: ', self.redlines, c4)
+        self.redWave = createEditableBox('', 50, 'Wavelength [um]', c4, 'double')
         self.redLine.currentIndexChanged.connect(self.redLineChange)
         self.redOffsetUnits = QComboBox()
         self.redOffsetUnits.addItems(["kms", "um", "units"])
         self.redOffset = QLineEdit('0')
-        self.add2widgets('Line offset: ', self.redOffset, self.redOffsetUnits, c4)
-        self.redGratPosMicron = self.createEditableBox('', 50, 'Grating position [um]: ', c4)
-        self.redGratPosUnits = self.createEditableBox('', 50, 'Grating position [unit]: ', c4)
+        add2widgets('Line offset: ', self.redOffset, self.redOffsetUnits, c4)
+        self.redGratPosMicron = createEditableBox('', 50, 'Grating position [um]: ', c4)
+        self.redGratPosUnits = createEditableBox('', 50, 'Grating position [unit]: ', c4)
         c4.addRow(QLabel('Spectral mode'),None)
-        self.redGratPattern = self.addComboBox('Grating movement pattern: ', self.gratpatterns, c4)
-        self.redStepSizeUp = self.createEditableBox('0', 40, 'Step size up [pixels]: ', c4, 'double')
-        self.redGratPosUp = self.createEditableBox('1', 40, 'Grating position up: ', c4, 'int')
-        self.redStepSizeDown = self.createEditableBox('0', 40, 'Step size down [pixels]: ', c4, 'double')
-        self.redGratPosDown = self.createEditableBox('0', 40, 'Grating position down: ', c4, 'int')
+        self.redGratPattern = addComboBox('Grating movement pattern: ', self.gratpatterns, c4)
+        self.redStepSizeUp = createEditableBox('0', 40, 'Step size up [pixels]: ', c4, 'double')
+        self.redGratPosUp = createEditableBox('1', 40, 'Grating position up: ', c4, 'int')
+        self.redStepSizeDown = createEditableBox('0', 40, 'Step size down [pixels]: ', c4, 'double')
+        self.redGratPosDown = createEditableBox('0', 40, 'Grating position down: ', c4, 'int')
         c4.addRow(QLabel('Timing and sensitivity'),None)
-        self.redRampLengthSamples = self.createEditableBox('32', 40, 'Ramp length [samples]: ', c4)
-        self.redRampLengthMs = self.createEditableBox('32', 40, 'Ramp length [ms]: ', c4)
-        self.redRamp4ChopPos = self.createEditableBox('', 40, 'Ramps per chop pos: ', c4)
-        self.redCC4ChopPos = self.createEditableBox('1', 40, 'CC per chop pos: ', c4)
-        self.redGratCycles = self.createEditableBox('1', 40, 'Number of grating cycles: ', c4)
-        self.redZeroBias = self.createEditableBox('60', 40, 'Zero bias [mV]: ', c4)
-        self.redBiasR = self.createEditableBox('0', 40, 'BiasR [mV]: ', c4)
-        self.redCapacitor = self.addComboBox('Capacitor [uF]: ', self.capacitors, c4)
-        self.redScanFileLength = self.createEditableBox('', 40, 'Scan file length [s]: ', c4)
+        self.redRampLengthSamples = createEditableBox('32', 40, 'Ramp length [samples]: ', c4)
+        self.redRampLengthMs = createEditableBox('32', 40, 'Ramp length [ms]: ', c4)
+        self.redRamp4ChopPos = createEditableBox('', 40, 'Ramps per chop pos: ', c4)
+        self.redCC4ChopPos = createEditableBox('1', 40, 'CC per chop pos: ', c4)
+        self.redGratCycles = createEditableBox('1', 40, 'Number of grating cycles: ', c4)
+        self.redZeroBias = createEditableBox('60', 40, 'Zero bias [mV]: ', c4)
+        self.redBiasR = createEditableBox('0', 40, 'BiasR [mV]: ', c4)
+        self.redCapacitor = addComboBox('Capacitor [uF]: ', self.capacitors, c4)
+        self.redScanFileLength = createEditableBox('', 40, 'Scan file length [s]: ', c4)
         
         # Column 5 (Blue array)
         c5 = self.col5.layout
         c5.addRow(QLabel('Blue Array.  Order 2: [48-72um]   Order 1:  [70-130 um]'),None)
         items = ['1', '2']
-        self.setOrder = self.addComboBox('Order: ', items, c5)
-        self.setFilter = self.addComboBox('Filter: ', ['1', '2'], c5)
-        self.blueLine = self.addComboBox('Line: ', self.bluelines, c5) 
+        self.setOrder = addComboBox('Order: ', items, c5)
+        self.setFilter = addComboBox('Filter: ', ['1', '2'], c5)
+        self.blueLine = addComboBox('Line: ', self.bluelines, c5) 
         self.blueLine.currentIndexChanged.connect(self.blueLineChange)
-        self.blueWave = self.createEditableBox('', 50, 'Wavelength [um]', c5)
+        self.blueWave = createEditableBox('', 50, 'Wavelength [um]', c5)
         self.blueOffsetUnits = QComboBox()
         self.blueOffsetUnits.addItems(["kms", "um", "units"])
         self.blueOffset = QLineEdit('0')
-        self.add2widgets('Line offset: ', self.blueOffset, self.blueOffsetUnits, c5)
-        self.blueGratPosMicron = self.createEditableBox('', 50, 'Grating position [um]: ', c5)
-        self.blueGratPosUnits = self.createEditableBox('', 50, 'Grating position [unit]: ', c5)
+        add2widgets('Line offset: ', self.blueOffset, self.blueOffsetUnits, c5)
+        self.blueGratPosMicron = createEditableBox('', 50, 'Grating position [um]: ', c5)
+        self.blueGratPosUnits = createEditableBox('', 50, 'Grating position [unit]: ', c5)
         c5.addRow(QLabel('Spectral mode'),None)
-        self.blueGratPattern = self.addComboBox('Grating movement pattern: ', self.gratpatterns, c5)
-        self.blueStepSizeUp = self.createEditableBox('0', 40, 'Step size up [pixels]: ', c5)
-        self.blueGratPosUp = self.createEditableBox('1', 40, 'Grating position up: ', c5)
-        self.blueStepSizeDown = self.createEditableBox('0', 40, 'Step size down [pixels]: ', c5)
-        self.blueGratPosDown = self.createEditableBox('0', 40, 'Grating position down: ', c5)
+        self.blueGratPattern = addComboBox('Grating movement pattern: ', self.gratpatterns, c5)
+        self.blueStepSizeUp = createEditableBox('0', 40, 'Step size up [pixels]: ', c5)
+        self.blueGratPosUp = createEditableBox('1', 40, 'Grating position up: ', c5)
+        self.blueStepSizeDown = createEditableBox('0', 40, 'Step size down [pixels]: ', c5)
+        self.blueGratPosDown = createEditableBox('0', 40, 'Grating position down: ', c5)
         c5.addRow(QLabel('Timing and sensitivity'),None)
-        self.blueRampLengthSamples = self.createEditableBox('32', 40, 'Ramp length [samples]: ', c5)
-        self.blueRampLengthMs = self.createEditableBox('32', 40, 'Ramp length [ms]: ', c5)
-        self.blueRamp4ChopPos = self.createEditableBox('', 40, 'Ramps per chop pos: ', c5)
-        self.blueCC4ChopPos = self.createEditableBox('1', 40, 'CC per chop pos: ', c5)
-        self.blueGratCycles = self.createEditableBox('1', 40, 'Number of grating cycles: ', c5)
-        self.blueZeroBias = self.createEditableBox('60', 40, 'Zero bias [mV]: ', c5)
-        self.blueBiasR = self.createEditableBox('0', 40, 'BiasR [mV]: ', c5)
-        self.blueCapacitor = self.addComboBox('Capacitor [uF]: ', self.capacitors, c5)
-        self.blueScanFileLength = self.createEditableBox('', 40, 'Scan file length [s]: ', c5)
+        self.blueRampLengthSamples = createEditableBox('32', 40, 'Ramp length [samples]: ', c5)
+        self.blueRampLengthMs = createEditableBox('32', 40, 'Ramp length [ms]: ', c5)
+        self.blueRamp4ChopPos = createEditableBox('', 40, 'Ramps per chop pos: ', c5)
+        self.blueCC4ChopPos = createEditableBox('1', 40, 'CC per chop pos: ', c5)
+        self.blueGratCycles = createEditableBox('1', 40, 'Number of grating cycles: ', c5)
+        self.blueZeroBias = createEditableBox('60', 40, 'Zero bias [mV]: ', c5)
+        self.blueBiasR = createEditableBox('0', 40, 'BiasR [mV]: ', c5)
+        self.blueCapacitor = addComboBox('Capacitor [uF]: ', self.capacitors, c5)
+        self.blueScanFileLength = createEditableBox('', 40, 'Scan file length [s]: ', c5)
         
         # Define conversion
         self.defineConversion()
@@ -518,65 +517,7 @@ class TableWidget(QWidget):
         self.chop_phase_default = config["chop_phase_default"]
         self.obs_con_samplesize = config["obs_con_samplesize"]
         print("sample size is: ", self.obs_con_samplesize)
-        
-    def add2widgets(self, text, widget1, widget2, layout):
-        box = QWidget()
-        box.layout = QHBoxLayout(box)
-        box.layout.setContentsMargins(0, 0, 0, 0)
-        box.layout.addWidget(widget1)
-        box.layout.addWidget(widget2)
-        layout.addRow(QLabel(text), box)
-        
-    def addComboBox(self, text, items, layout=None):
-        a = QComboBox()
-        a.addItems(items)
-        if layout is not None:
-            a.label = QLabel(text)
-            layout.addRow(a.label, a)
-        return a
-        
-    def createEditableBox(self, text, size, label='', layout=None, validator=None):
-        box = QLineEdit(text)
-        #box.setText(text)
-        box.resize(size,40)
-        if layout is not None:
-            box.label = QLabel(label)
-            layout.addRow(box.label, box)
-        if validator is not None:
-            if validator == 'int':
-                box.setValidator(QIntValidator())
-            elif validator == 'double':
-                box.setValidator(QDoubleValidator())
-        return box
-        
-    def createWidget(self, direction, layout=None):
-        a = QWidget()
-        if direction == 'H':
-            a.layout = QHBoxLayout(a)
-        elif direction == 'V':
-            a.layout = QVBoxLayout(a)
-        elif direction == 'F':
-            a.layout = QFormLayout(a)
-            a.layout.setLabelAlignment(Qt.AlignLeft)
-            a.layout.setAlignment(Qt.AlignLeft)
-        if layout is not None:
-            layout.addWidget(a)
-        return a
-    
-    def createButton(self, action, layout=None):
-        a = QPushButton(action)
-        if layout is not None:
-            layout.addWidget(a)
-        return a
-    
-    def addLabel(self, text, layout=None):
-        label = QLabel()
-        label.setText(text)
-        label.setAlignment(Qt.AlignCenter)
-        if layout is not None:
-            layout.addWidget(label)
-        return label
-    
+            
     def defineConversion(self):
         self.k2tw = {
                 'OBSMODE'          :self.observingMode,
@@ -866,25 +807,30 @@ class TableWidget(QWidget):
         # override timepergrtcyc if distributing steps
         if self.var['nodcycles'] >= 2:
             if self.var['scandist'] == 'Up':
-                red_grtcyctime_sam = \
-                    (self.var['red_posup'] / self.var['nodcycles']) * red_grtpostime_sam
-                blue_grtcyctime_sam = \
-                    (self.var['blue_posup'] / self.var['nodcycles']) * blue_grtpostime_sam
                 if self.var['red_posup'] <= 1:
                     red_grtcyctime_sam = self.var['red_numgrtpos'] * red_grtpostime_sam
+                else:
+                    red_grtcyctime_sam = \
+                    (self.var['red_posup'] / self.var['nodcycles']) * red_grtpostime_sam
                 if self.var['blue_posup'] <= 1:
                     blue_grtcyctime_sam = self.var['blue_numgrtpos'] * blue_grtpostime_sam
+                else:
+                    blue_grtcyctime_sam = \
+                    (self.var['blue_posup'] / self.var['nodcycles']) * blue_grtpostime_sam                    
             elif self.var['scandist'] == 'Down':
-                red_grtcyctime_sam = \
-                    (self.var['red_posdown'] / self.var['nodcycles']) * red_grtpostime_sam
-                blue_grtcyctime_sam = \
-                    (self.var['blue_posdown'] / self.var['nodcycles']) * blue_grtpostime_sam
                 if self.var['red_posdown'] <= 1:
                     red_grtcyctime_sam = self.var['red_numgrtpos'] * red_grtpostime_sam
+                else:
+                    red_grtcyctime_sam = \
+                    (self.var['red_posdown'] / self.var['nodcycles']) * red_grtpostime_sam
                 if self.var['blue_posdown'] <= 1:
                     blue_grtcyctime_sam = self.var['blue_numgrtpos'] * blue_grtpostime_sam
+                else:
+                    blue_grtcyctime_sam = \
+                    (self.var['blue_posdown'] / self.var['nodcycles']) * blue_grtpostime_sam
 
         # time per scan in ms, red and blue
+        print('red_grtcyctime_sam ', red_grtcyctime_sam)
         red_scantime_ms = (1000 / obs_con_samplesize) * self.var['red_grtcyc'] * red_grtcyctime_sam
         blue_scantime_ms = (1000 / obs_con_samplesize) * self.var['blue_grtcyc'] * blue_grtcyctime_sam
         
