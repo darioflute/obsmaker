@@ -107,6 +107,7 @@ class GUI(QMainWindow):
             # Default settings
             self.TW.setDefaults()
             # Load template and update table widget
+            self.TW.sctfile = sctfile
             self.aorParameters = readSct(sctfile)
             self.TW.update(self.aorParameters)
             sctpath = os.path.dirname(os.path.abspath(sctfile))

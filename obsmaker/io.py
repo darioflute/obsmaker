@@ -485,7 +485,7 @@ def readSct(filename):
         print("This is not a *.sct file")
         return None
     
-def writeSct(sctPars):
+def writeSct(sctPars, sctfile):
     """
     Write a *.sct file from a dictionary.
     """
@@ -494,6 +494,7 @@ def writeSct(sctPars):
     fd.setNameFilters(["Scan description (*.sct)", "All Files (*)"])
     fd.setOptions(QFileDialog.DontUseNativeDialog)
     fd.setViewMode(QFileDialog.List)
+    fd.getSaveFileName(directory=sctfile)
     if (fd.exec()):
         filenames= fd.selectedFiles()
         filename = filenames[0]

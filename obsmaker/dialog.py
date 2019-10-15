@@ -1178,29 +1178,27 @@ class TableWidget(QWidget):
 
     def calcGrtpos(self):
         # Compute red grating start positions for different distribution modes
+        #print('computing grating positions ...')
+        #print('scandist ', self.var['scandist'], ' red_lambda ', self.var['red_lambda'])
         if self.var['scandist'] == 'None':
             self.var['red_grstart'] = []
             if self.var['red_lambda'] == 'Start':
                 self.var['red_grstart'].append(int(self.var['red_grtpos']))
             if self.var['red_lambda'] == 'Centre':
-                unitsup = int((float(self.var['red_sizeup_isu']) *
-                    float(self.var['red_posup'] - 1)) / 2)
+                unitsup = int(self.var['red_sizeup_isu'] * (self.var['red_posup'] - 1) / 2)
                 self.var['red_grstart'].append(int(self.var['red_grtpos']) - unitsup)
             if self.var['red_lambda'] == 'Dither':
-                unitsup = int((float(self.var['red_sizeup_isu']) *
-                    float(self.var['red_posup'] - 1)) / 2)
+                unitsup = int(self.var['red_sizeup_isu'] * (self.var['red_posup'] - 1) / 2)
                 self.var['red_grstart'].append(int(self.var['red_grtpos']))
         elif self.var['scandist'] == 'Split':
             self.var['red_grstart'] = [ None ] * self.var['splits']
             if self.var['red_lambda'] == 'Start':
                 self.var['red_grstart'][0] = int(self.var['red_grtpos'])
             if self.var['red_lambda'] == 'Centre':
-                unitsup = int((float(self.var['red_sizeup_isu']) *  \
-                    float(self.var['red_posup'] - 1)) / 2)
+                unitsup = int(self.var['red_sizeup_isu'] * (self.var['red_posup'] - 1) / 2)
                 self.var['red_grstart'][0] = int(self.var['red_grtpos']) - unitsup
             # distance travelled by each split
-            distsplit = int(float(self.var['red_sizeup_isu']) *
-                (float(self.var['red_posup']) / float(self.var['splits'])))
+            distsplit = int(self.var['red_sizeup_isu'] * self.var['red_posup'] / self.var['splits'])
             for idx in range(1, self.var['splits']):
                 self.var['red_grstart'][idx] = self.var['red_grstart'][idx - 1] +  distsplit
         else:  # Up and Down
@@ -1209,67 +1207,57 @@ class TableWidget(QWidget):
             self.var['red_grstart'] = [ None ] * self.var['numnodcyc']
             if self.var['red_lambda'] == 'Start':
                 self.var['red_grstart'][0] = int(self.var['red_grtpos'])
-                distnodcycle = int(float(
-                    (float(self.var['red_posup']) / self.var['numnodcyc']) * self.var['red_sizeup_isu']))
                 if self.var['scandist'] == 'Up':
+                    distnodcycle = int(self.var['red_posup'] / self.var['numnodcyc'] * self.var['red_sizeup_isu'])
                     for idx in range(1, self.var['numnodcyc']):
                         self.var['red_grstart'][idx] = self.var['red_grstart'][idx - 1] + distnodcycle
                 if self.var['scandist'] == 'Down':
+                    distnodcycle = int(self.var['red_posdown'] / self.var['numnodcyc'] * self.var['red_sizedown_isu'])
                     for idx in range(1, self.var['numnodcyc']):
                         self.var['red_grstart'][idx] = self.var['red_grstart'][idx - 1] - distnodcycle
             elif self.var['red_lambda'] == 'Centre':
                 if self.var['scandist'] == 'Up':
-                    unitsup = int((float(self.var['red_sizeup_isu']) *  \
-                        float(self.var['red_posup'] - 1)) / 2)
-                    distnodcycle = int(float(
-                        (float(self.var['red_posup']) /  \
-                        self.var['numnodcyc']) *  self.var['red_sizeup_isu']))
+                    unitsup = int(self.var['red_sizeup_isu'] * (self.var['red_posup'] - 1) / 2)
+                    distnodcycle = int(self.var['red_posup'] / self.var['numnodcyc'] *  self.var['red_sizeup_isu'])
                     self.var['red_grstart'][0] = int(self.var['red_grtpos']) - unitsup
                     for idx in range(1, self.var['numnodcyc']):
                         self.var['red_grstart'][idx] = self.var['red_grstart'][idx - 1] + distnodcycle
                 if self.var['scandist'] == 'Down':
-                    unitsdown = int((float(self.var['red_sizedown_isu']) *
-                        float(self.var['red_posdown'] - 1)) / 2)
-                    distnodcycle = int(float((float(self.var['red_posdown']) /  \
-                        self.var['numnodcyc']) * self.var['red_sizedown_isu']))
+                    unitsdown = int(self.var['red_sizedown_isu'] * (self.var['red_posdown'] - 1) / 2)
+                    distnodcycle = int(self.var['red_posdown'] / self.var['numnodcyc'] * self.var['red_sizedown_isu'])
                     self.var['red_grstart'][0] = int(self.var['red_grtpos']) + unitsdown
                     for idx in range(1, self.var['numnodcyc']):
                         self.var['red_grstart'][idx] = self.var['red_grstart'][idx - 1] - distnodcycle
             else:  # Dither or Inward
+                #print('Dither or inward')
                 if self.var['numnodcyc'] == 1:
                     if self.var['scandist'] == 'Up':
-                        unitsup = int((float(self.var['red_sizeup_isu']) *  \
-                            float(self.var['red_posup'] - 1)) / 2)
-                        distnodcycle = int(float((float(self.var['red_posup']) /  \
-                            self.var['numnodcyc']) * self.var['red_sizeup_isu']))
+                        unitsup = int(self.var['red_sizeup_isu'] * (self.var['red_posup'] - 1) / 2)
+                        distnodcycle = int(self.var['red_posup'] / self.var['numnodcyc'] * self.var['red_sizeup_isu'])
                         self.var['red_grstart'][0] = int(self.var['red_grtpos']) - unitsup
                         for idx in range(1, self.var['numnodcyc']):
-                            self.var['red_grstart'][idx] =  \
-                                self.var['red_grstart'][idx - 1] + distnodcycle
+                            self.var['red_grstart'][idx] = self.var['red_grstart'][idx - 1] + distnodcycle
                     if self.var['scandist'] == 'Down':
-                        unitsdown = int((float(self.var['red_sizedown_isu']) *
-                            float(self.var['red_posdown'] - 1)) / 2)
-                        distnodcycle = int(float((float(self.var['red_posdown']) /  \
-                            self.var['numnodcyc']) * self.var['red_sizedown_isu']))
+                        unitsdown = int(self.var['red_sizedown_isu'] * (self.var['red_posdown'] - 1) / 2)
+                        distnodcycle = int(self.var['red_posdown'] / self.var['numnodcyc'] * self.var['red_sizedown_isu'])
                         self.var['red_grstart'][0] = int(self.var['red_grtpos']) + unitsdown
                         for idx in range(1, self.var['numnodcyc']):
-                            self.var['red_grstart'][idx] =  \
-                                self.var['red_grstart'][idx - 1] - distnodcycle
-                if self.var['numnodcyc'] != 1:  #else:
+                            self.var['red_grstart'][idx] = self.var['red_grstart'][idx - 1] - distnodcycle
+                elif self.var['numnodcyc'] > 1:  #else:
                     self.var['red_grstart'][0] = int(self.var['red_grtpos'])
                     if self.var['scandist'] == 'Up':
-                        unitsup = int((float(self.var['red_sizeup_isu']) *  \
-                            float(self.var['red_posup'] - 1)) / 2)
-                        pospernodcycle = float(float(self.var['red_posup']) / self.var['numnodcyc'])
-                        distnodcycle = int(pospernodcycle * float(self.var['red_sizeup_isu']))
-                        widthnodcycle = int((pospernodcycle - 1) * float(self.var['red_sizeup_isu']))
+                        unitsup = int(self.var['red_sizeup_isu'] * (self.var['red_posup'] - 1) / 2)
+                        pospernodcycle = self.var['red_posup'] / self.var['numnodcyc']
+                        distnodcycle = int(pospernodcycle * self.var['red_sizeup_isu'])
+                        #print('unitsup, pospenodcycle, distnodcycle ', unitsup, pospernodcycle, distnodcycle)
+                        widthnodcycle = int((pospernodcycle - 1) * self.var['red_sizeup_isu'])
                         stepsizered = self.var['red_sizeup_isu']
+                        #print('stepsizered ', stepsizered)
                     elif self.var['scandist'] == 'Down':
-                        unitsdown = int((float(self.var['red_sizedown_isu']) *
-                            float(self.var['red_posdown'] - 1)) / 2)
-                        pospernodcycle = float(float(self.var['red_posdown']) / self.var['numnodcyc'])
-                        distnodcycle = int(pospernodcycle * float(self.var['red_sizedown_isu']))
-                        widthnodcycle = int((pospernodcycle - 1) * float(self.var['red_sizedown_isu']))
+                        unitsdown = int(self.var['red_sizedown_isu'] * (self.var['red_posdown'] - 1) / 2)
+                        pospernodcycle = self.var['red_posdown'] / self.var['numnodcyc']
+                        distnodcycle = int(pospernodcycle * self.var['red_sizedown_isu'])
+                        widthnodcycle = int((pospernodcycle - 1) * self.var['red_sizedown_isu'])
                         stepsizered = self.var['red_sizedown_isu']
                     if self.var['scandist'] in ['Split', 'None']:
                         stepsizered = self.var['red_sizeup_isu']
@@ -1286,25 +1274,32 @@ class TableWidget(QWidget):
                         else:
                             self.var['red_grstart'][0] = int(self.var['red_grtpos']) -  \
                                 int(math.floor(widthnodcycle)) - int(stepsizered) // 2  ## CHECK
+                                
+                    #print('start ', self.var['red_grstart'])
                     revs = 1
                     #  begin spectral dithering routine
                     dith = 1
                     for i in range(1, self.var['numnodcyc'] - 1):
                         if (dith % 2) == 0:
+                            #print('dith even ', dith, revs)
                             self.var['red_grstart'][dith] =  self.var['red_grstart'][0] -  \
                                 int(math.floor(distnodcycle * revs))
                             revs += 1
                         else:
+                            #print('dith odd ', dith, revs)
                             self.var['red_grstart'][dith] = self.var['red_grstart'][0] +  \
                                 int(math.floor(distnodcycle * revs))
                         dith += 1
                     dith = dith - 1
                     if (self.var['numnodcyc'] % 2) != 0:
+                        #print('numnodcy odd ', dith)
                         self.var['red_grstart'][dith + 1] =  self.var['red_grstart'][0] -  \
                             int(math.floor(distnodcycle * revs))
                     else:
+                        #print('numnodcy even', dith)
                         self.var['red_grstart'][dith + 1] =  self.var['red_grstart'][0] +  \
                             int(math.floor(distnodcycle * revs))
+                    #print('grstart ', self.var['red_grstart'])
                     # with inward dither simply reverse the starting positions
                     # to start at the edge
                     if self.var['red_lambda'] == 'Inward dither':
@@ -1316,24 +1311,20 @@ class TableWidget(QWidget):
             if self.var['blue_lambda'] == 'Start':
                 self.var['blue_grstart'].append(int(self.var['blue_grtpos']))
             if self.var['blue_lambda'] == 'Centre':
-                unitsup = int((float(self.var['blue_sizeup_isu']) *
-                    float(self.var['blue_posup'] - 1)) / 2)
+                unitsup = int(self.var['blue_sizeup_isu'] * (self.var['blue_posup'] - 1) / 2)
                 self.var['blue_grstart'].append(int(self.var['blue_grtpos']) - unitsup)
             if self.var['blue_lambda'] == 'Dither':
-                unitsup = int((float(self.var['blue_sizeup_isu']) *
-                    float(self.var['blue_posup'] - 1)) / 2)
+                unitsup = int(self.var['blue_sizeup_isu'] * (self.var['blue_posup'] - 1) / 2)
                 self.var['blue_grstart'].append(int(self.var['blue_grtpos']))
         elif self.var['scandist'] == 'Split':
             self.var['blue_grstart'] = [ None ] * self.var['splits']
             if self.var['blue_lambda'] == 'Start':
                 self.var['blue_grstart'][0] = int(self.var['blue_grtpos'])
             elif self.var['blue_lambda'] == 'Centre':
-                unitsup = int((float(self.var['blue_sizeup_isu']) *
-                    float(self.var['blue_posup'] - 1)) / 2)
+                unitsup = int(self.var['blue_sizeup_isu'] * (self.var['blue_posup'] - 1) / 2)
                 self.var['blue_grstart'][0] = int(self.var['blue_grtpos']) - unitsup
             # distance travelled by each split
-            distsplit = int(float(self.var['blue_sizeup_isu']) *
-                (float(self.var['blue_posup']) / float(self.var['splits'])))
+            distsplit = int(self.var['blue_sizeup_isu'] * self.var['blue_posup'] / self.var['splits'])
             for idx in range(1, self.var['splits']):
                 self.var['blue_grstart'][idx] = self.var['blue_grstart'][idx - 1] + distsplit
         else:  # Up and Down
@@ -1342,65 +1333,54 @@ class TableWidget(QWidget):
             self.var['blue_grstart'] = [ None ] * self.var['numnodcyc']
             if self.var['blue_lambda'] == 'Start':
                 self.var['blue_grstart'][0] = int(self.var['blue_grtpos'])
-                distnodcycle = int(float((float(self.var['blue_posup']) / self.var['numnodcyc']) *
-                    self.var['blue_sizeup_isu']))
                 if self.var['scandist'] == 'Up':
+                    distnodcycle = int(self.var['blue_posup'] / self.var['numnodcyc'] * self.var['blue_sizeup_isu'])
                     for idx in range(1, self.var['numnodcyc']):
                         self.var['blue_grstart'][idx] = self.var['blue_grstart'][idx - 1] + distnodcycle
                 if self.var['scandist'] == 'Down':
+                    distnodcycle = int(self.var['blue_posdown'] / self.var['numnodcyc'] * self.var['blue_sizedown_isu'])
                     for idx in range(1, self.var['numnodcyc']):
                         self.var['blue_grstart'][idx] = self.var['blue_grstart'][idx - 1] - distnodcycle
             elif self.var['blue_lambda'] == 'Centre':
                 if self.var['scandist'] == 'Up':
-                    unitsup = int((float(self.var['blue_sizeup_isu']) *  \
-                        float(self.var['blue_posup'] - 1)) / 2)
-                    distnodcycle = int(float((float(self.var['blue_posup']) /  \
-                        self.var['numnodcyc']) *  self.var['blue_sizeup_isu']))
+                    unitsup = int(self.var['blue_sizeup_isu'] * (self.var['blue_posup'] - 1) / 2)
+                    distnodcycle = int(self.var['blue_posup'] / self.var['numnodcyc'] *  self.var['blue_sizeup_isu'])
                     self.var['blue_grstart'][0] = int(self.var['blue_grtpos']) - unitsup
                     for idx in range(1, self.var['numnodcyc']):
                         self.var['blue_grstart'][idx] = self.var['blue_grstart'][idx - 1] + distnodcycle
                 if self.var['scandist'] == 'Down':
-                    unitsdown = int((float(self.var['blue_sizedown_isu']) *
-                        float(self.var['blue_posdown'] - 1)) / 2)
-                    distnodcycle = int(float((float(self.var['blue_posdown']) /  \
-                        self.var['numnodcyc']) * self.var['blue_sizedown_isu']))
+                    unitsdown = int(self.var['blue_sizedown_isu'] * (self.var['blue_posdown'] - 1) / 2)
+                    distnodcycle = int(self.var['blue_posdown'] / self.var['numnodcyc'] * self.var['blue_sizedown_isu'])
                     self.var['blue_grstart'][0] = int(self.var['blue_grtpos']) + unitsdown
                     for idx in range(1, self.var['numnodcyc']):
                         self.var['blue_grstart'][idx] = self.var['blue_grstart'][idx - 1] - distnodcycle
             else:  # Dither or Inward
                 if self.var['numnodcyc'] == 1:
                     if self.var['scandist'] == 'Up':
-                        unitsup = int((float(self.var['blue_sizeup_isu']) *  \
-                            float(self.var['blue_posup'] - 1)) / 2)
-                        distnodcycle = int(float((float(self.var['blue_posup']) /  \
-                            self.var['numnodcyc']) * self.var['blue_sizeup_isu']))
+                        unitsup = int(self.var['blue_sizeup_isu'] * (self.var['blue_posup'] - 1) / 2)
+                        distnodcycle = int(self.var['blue_posup'] / self.var['numnodcyc'] * self.var['blue_sizeup_isu'])
                         self.var['blue_grstart'][0] = int(self.var['blue_grtpos']) - unitsup
                         for idx in range(1, self.var['numnodcyc']):
-                            self.var['blue_grstart'][idx] =  \
-                                self.var['blue_grstart'][idx - 1] + distnodcycle
+                            self.var['blue_grstart'][idx] = self.var['blue_grstart'][idx - 1] + distnodcycle
                     if self.var['scandist'] == 'Down':
-                        unitsdown = int((float(self.var['blue_sizedown_isu']) *
-                            float(self.var['blue_posdown'] - 1)) / 2)
-                        distnodcycle = int(float((float(self.var['blue_posdown']) /  \
-                            self.var['numnodcyc']) * self.var['blue_sizedown_isu']))
+                        unitsdown = int(self.var['blue_sizedown_isu'] * (self.var['blue_posdown'] - 1) / 2)
+                        distnodcycle = int(self.var['blue_posdown'] / self.var['numnodcyc'] * self.var['blue_sizedown_isu'])
                         self.var['blue_grstart'][0] = int(self.var['blue_grtpos']) + unitsdown
                         for idx in range(1, self.var['numnodcyc']):
                             self.var['blue_grstart'][idx] = self.var['blue_grstart'][idx - 1] - distnodcycle
                 if self.var['numnodcyc'] != 1:  #else:
                     self.var['blue_grstart'][0] = int(self.var['blue_grtpos'])
                     if self.var['scandist'] == 'Up':
-                        unitsup = int((float(self.var['blue_sizeup_isu']) *  \
-                            float(self.var['blue_posup'] - 1)) / 2)
-                        pospernodcycle = float(float(self.var['blue_posup']) / self.var['numnodcyc'])
-                        distnodcycle = int(pospernodcycle * float(self.var['blue_sizeup_isu']))
-                        widthnodcycle = int((pospernodcycle - 1) * float(self.var['blue_sizeup_isu']))
+                        unitsup = int(self.var['blue_sizeup_isu'] * (self.var['blue_posup'] - 1) / 2)
+                        pospernodcycle = self.var['blue_posup'] / self.var['numnodcyc']
+                        distnodcycle = int(pospernodcycle * self.var['blue_sizeup_isu'])
+                        widthnodcycle = int((pospernodcycle - 1) * self.var['blue_sizeup_isu'])
                         stepsizeblue = self.var['blue_sizeup_isu']
                     if self.var['scandist'] == 'Down':
-                        unitsdown = int((float(self.var['blue_sizedown_isu']) *
-                            float(self.var['blue_posdown'] - 1)) / 2)
-                        pospernodcycle = float(float(self.var['blue_posdown']) / self.var['numnodcyc'])
-                        distnodcycle = int(pospernodcycle * float(self.var['blue_sizedown_isu']))
-                        widthnodcycle = int((pospernodcycle - 1) * float(self.var['blue_sizedown_isu']))
+                        unitsdown = int(self.var['blue_sizedown_isu'] * (self.var['blue_posdown'] - 1) / 2)
+                        pospernodcycle = self.var['blue_posdown'] / self.var['numnodcyc']
+                        distnodcycle = int(pospernodcycle * self.var['blue_sizedown_isu'])
+                        widthnodcycle = int((pospernodcycle - 1) * self.var['blue_sizedown_isu'])
                         stepsizeblue = self.var['blue_sizedown_isu']
                     if self.var['scandist'] in ['Split', 'None']:
                         stepsizeblue = self.var['blue_sizeup_isu']
@@ -1444,10 +1424,10 @@ class TableWidget(QWidget):
         # Compute values
         gratpos = np.array(self.var['red_grstart'])
         l, w = inductosyn2wavelength(gratpos, self.var['dichroic'], 'RED', 1)
-        self.var['red_lambdastart'] = np.mean(l)
+        self.var['red_lambdastart'] = np.mean(l, axis=(1,2))
         gratpos = np.array(self.var['blue_grstart'])
         l, w = inductosyn2wavelength(gratpos, self.var['dichroic'], 'BLUE', self.var['order'])
-        self.var['blue_lambdastart'] = np.mean(l)
+        self.var['blue_lambdastart'] = np.mean(l, axis=(1,2))
 
     def calcInductosynPos(self):
         """ Convert input wavelength to inductosyn units and update GUI."""
@@ -1462,7 +1442,7 @@ class TableWidget(QWidget):
             if self.var['redshift'] == '-99.0':
                 self.var['redshift'] = velocity2z(self.var['red_offset'])
             xt = xt * (1.0 + self.var['redshift'])
-        print('Requested red wavelength: ' + str(xt))
+        #print('Requested red wavelength: ' + str(xt))
         self.redGratPosMicron.setText('{0:.4f}'.format(round(xt,4)))
         grtpos = wavelength2inductosyn(xt, self.var['dichroic'], 'RED', 1, obsdate='')
         self.var['red_grtpos'] = int(grtpos)
@@ -1488,7 +1468,7 @@ class TableWidget(QWidget):
             if self.var['redshift'] == '-99.0':
                 self.var['redshift'] = velocity2z(self.var['blue_offset'])
             xt = xt * (1.0 + self.var['redshift'])
-        print('Requested blue wavelength: ' + str(xt))
+        #print('Requested blue wavelength: ' + str(xt))
         self.blueGratPosMicron.setText('{0:.4f}'.format(round(xt,4)))
         grtpos = wavelength2inductosyn(xt, self.var['dichroic'], 'BLUE', self.var['order'], obsdate='')
         self.var['blue_grtpos'] = int(grtpos)
@@ -1980,7 +1960,7 @@ class TableWidget(QWidget):
                 else:
                     print('Unknown key ',key)
         # Call writing routine
-        writeSct(sctPars)
+        writeSct(sctPars, self.sctfile)
         
 class ScanDescription(QObject):
     """ Scan Description class """
