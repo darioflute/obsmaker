@@ -495,8 +495,9 @@ def writeSct(sctPars, sctfile):
     fd.setNameFilters(["Scan description (*.sct)", "All Files (*)"])
     fd.setOptions(QFileDialog.DontUseNativeDialog)
     fd.setViewMode(QFileDialog.List)
-    fd.getSaveFileName(directory=sctfile)
+    fd.selectFile(sctfile)
     if (fd.exec()):
+        #fd.getSaveFileName(directory=sctfile)
         filenames= fd.selectedFiles()
         filename = filenames[0]
         if filename[-4:] != '.sct':

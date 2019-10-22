@@ -104,6 +104,8 @@ class GUI(QMainWindow):
         if (fd.exec()):
             fileName= fd.selectedFiles()
             sctfile = fileName[0]
+            self.title = 'Observation maker for FIFI-LS ['+sctfile+']'
+            self.setWindowTitle(self.title)
             # Default settings
             self.TW.setDefaults()
             # Load template and update table widget
@@ -111,6 +113,7 @@ class GUI(QMainWindow):
             self.aorParameters = readSct(sctfile)
             self.TW.update(self.aorParameters)
             sctpath = os.path.dirname(os.path.abspath(sctfile))
+            self.TW.sctdir.setText(sctpath)
             mapfile = os.path.basename(self.TW.mapListPath)
             self.TW.pathFile = sctpath
             self.TW.mapListPath = os.path.join(sctpath, mapfile)

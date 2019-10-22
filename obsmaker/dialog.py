@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import (QWidget, QTabWidget,QVBoxLayout, QComboBox, 
-                             QLabel, QLineEdit, QMessageBox)
+                             QLabel, QLineEdit, QMessageBox, QFileDialog)
 from PyQt5.QtCore import Qt, QObject
+from PyQt5.QtGui import QIntValidator
 import os
 import math
 import numpy as np
@@ -64,6 +65,13 @@ class TableWidget(QWidget):
         self.writeObservation.setEnabled(False)
         c1.addRow(self.buildObservation, self.writeObservation)
 
+        c1.addRow(QLabel('Top directory to save sct files'),None)
+        self.sctdir = QLineEdit('')
+        self.sctdir.setReadOnly(True)
+        self.selectSctdirectory = createButton('Select')
+        self.selectSctdirectory.clicked.connect(self.selectSctdir)
+        c1.addRow(self.selectSctdirectory, self.sctdir)
+
         self.observationID = createEditableBox("None", 40, "Observation ID: ", c1)
         self.observationType = addComboBox('Observation type: ', self.obstypes, c1)
        
@@ -75,6 +83,7 @@ class TableWidget(QWidget):
         self.targetRA = createEditableBox('00 00 00.0', 40, 'Target RA: ', c1)
         self.targetDec = createEditableBox('+00 00 00.0', 40, 'Target Dec: ', c1)
         self.redshift = createEditableBox('0', 40, 'Redshift [z]: ', c1, 'double')
+        self.redshift.textEdited.connect(self.redshiftUpdated)
         self.detectorAngle = createEditableBox('0', 40, 'Detector angle (E of N): ', c1, 'double')
         self.observingmodes = ["Symmetric", "Asymmetric"]
         #observingmodes = ["Beam switching", "Unmatched nodding"]
@@ -85,10 +94,6 @@ class TableWidget(QWidget):
         self.primaryArray = addComboBox('Primary array: ', self.primaryArrays, c1)
         self.primaryArray.currentIndexChanged.connect(self.primaryArrayChange)
         self.setpoint = createEditableBox('', 40, 'Set setpoint: ', c1)
-        self.col1.layout.addRow(QLabel('Observing stats'),None)
-        self.rawIntTime = createEditableBox('', 40, 'Raw integration time (s): ', c1, 'double')
-        self.onsourceIntTime = createEditableBox('', 40, 'On source integration time (s): ', c1)
-        self.estObsTime = createEditableBox('', 40, 'Estimated observation time (s): ', c1)
         # Col 2
         c2 = self.col2.layout
         c2.addRow(QLabel('Nod Pattern'),None)
@@ -150,7 +155,14 @@ class TableWidget(QWidget):
         self.noGratPos4Nod = createEditableBox('', 40, 'No of grating pos per nod: ', c3)
         self.gratCycle4Nod = createEditableBox('', 40, 'Grating cycle per nod (30.0): ', c3)
         self.timeCompleteMap = createEditableBox('', 40, 'Time to complete map [min]: ', c3)
-        #c3.addRow(QLabel('Scan description file: '), self.loadScanDescriptionFile)
+
+        c3.addRow(QLabel('Observing stats'),None)
+        self.rawIntTime = createEditableBox('', 40, 'Raw integration time (s): ', c3, 'double')
+        self.onsourceIntTime = createEditableBox('', 40, 'On source integration time (s): ', c3)
+        self.estObsTime = createEditableBox('', 40, 'Estimated observation time (s): ', c3)
+
+        
+        
         
         # Arrays tab
         self.col4 = createWidget('F', self.tab2.layout)
@@ -168,6 +180,8 @@ class TableWidget(QWidget):
         self.redOffsetUnits = QComboBox()
         self.redOffsetUnits.addItems(["kms", "um", "units"])
         self.redOffset = QLineEdit('0')
+        self.redOffset.setValidator(QIntValidator())
+        self.redOffset.textEdited.connect(self.redOffsetUpdated)
         add2widgets('Line offset: ', self.redOffset, self.redOffsetUnits, c4)
         self.redGratPosMicron = createEditableBox('', 50, 'Grating position [um]: ', c4)
         self.redGratPosUnits = createEditableBox('', 50, 'Grating position [unit]: ', c4)
@@ -190,7 +204,7 @@ class TableWidget(QWidget):
         
         # Column 5 (Blue array)
         c5 = self.col5.layout
-        c5.addRow(QLabel('Blue Array.  Order 2: [48-72um]   Order 1:  [70-130 um]'),None)
+        c5.addRow(QLabel('Blue Array.  Order 2: [48-72um]   Order 1:  [70-130 um]'), None)
         items = ['1', '2']
         self.setOrder = addComboBox('Order: ', items, c5)
         self.setFilter = addComboBox('Filter: ', ['1', '2'], c5)
@@ -200,6 +214,8 @@ class TableWidget(QWidget):
         self.blueOffsetUnits = QComboBox()
         self.blueOffsetUnits.addItems(["kms", "um", "units"])
         self.blueOffset = QLineEdit('0')
+        self.blueOffset.setValidator(QIntValidator())
+        self.blueOffset.textEdited.connect(self.blueOffsetUpdated)
         add2widgets('Line offset: ', self.blueOffset, self.blueOffsetUnits, c5)
         self.blueGratPosMicron = createEditableBox('', 50, 'Grating position [um]: ', c5)
         self.blueGratPosUnits = createEditableBox('', 50, 'Grating position [unit]: ', c5)
@@ -240,6 +256,60 @@ class TableWidget(QWidget):
         self.gratingDirectionChange(0)
         self.offPosChange(0)
         self.mapPatternChange(0, readFile=False)
+        
+    def redshiftUpdated(self):
+        """Action triggered by editing the redshift box."""
+        try:
+            z = float(self.redshift.text())
+            # Update digits
+            self.redshift.setText(str(z))
+            self.var['redshift'] = z
+            # Update line offsets in km/s
+            cz = self.c * z # velocity in km/s
+            self.redOffset.setText("{0:.0f}".format(cz))
+            self.blueOffset.setText("{0:.0f}".format(cz))
+            # Set the units to km/s
+            index = self.redOffsetUnits.findText('kms', Qt.MatchFixedString)
+            self.redOffsetUnits.setCurrentIndex(index)
+            index = self.blueOffsetUnits.findText('kms', Qt.MatchFixedString)
+            self.blueOffsetUnits.setCurrentIndex(index)
+        except:
+            print('Wrong value inserted')
+        
+    def redOffsetUpdated(self):
+        """Action triggered by changing velocity of red line."""
+        if self.redOffsetUnits.currentText() == 'kms':
+            try:
+                cz = float(self.redOffset.text())
+                z = cz / self.c
+                self.var['redshift'] = z
+                self.blueOffset.setText("{0:.0f}".format(cz))
+                # Set the units to km/s
+                index = self.blueOffsetUnits.findText('kms', Qt.MatchFixedString)
+                self.blueOffsetUnits.setCurrentIndex(index)
+                self.redshift.setText(str(round(z,8)))
+            except:
+                print('Wrong value entered')
+        else:
+            return
+
+    def blueOffsetUpdated(self):
+        """Action triggered by changing velocity of red line."""
+        if self.blueOffsetUnits.currentText() == 'kms':
+            try:
+                cz = float(self.blueOffset.text())
+                z = cz / self.c
+                self.var['redshift'] = z
+                self.redOffset.setText("{0:.0f}".format(cz))
+                # Set the units to km/s
+                index = self.redOffsetUnits.findText('kms', Qt.MatchFixedString)
+                self.redOffsetUnits.setCurrentIndex(index)
+                self.redshift.setText(str(round(z,8)))
+            except:
+                print('Wrong value entered')
+        else:
+            return
+        
         
     def blueLineChange(self, index):
         """If new line selected, populate the wavelength."""
@@ -530,6 +600,7 @@ class TableWidget(QWidget):
         self.f_chop = config["f_chop"]
         self.chop_phase_default = config["chop_phase_default"]
         self.obs_con_samplesize = config["obs_con_samplesize"]
+        self.c = config["speed_of_light"]
             
     def defineConversion(self):
         self.k2tw = {
@@ -614,7 +685,7 @@ class TableWidget(QWidget):
             if isinstance(label, QLineEdit):
                 try:
                     if key == 'REDSHIFT':
-                        label.setText("{0:.10f}".format(float(aorPars[key])))
+                        label.setText("{0:f}".format(float(aorPars[key])))
                     else:
                         label.setText(aorPars[key])
                 except:
@@ -1564,6 +1635,9 @@ class TableWidget(QWidget):
             n_nod_cycles = mround(math.ceil (t_grating_sweep * 2 / t_nod_interval), 2) / 2
             # number of grating positions on one nod
             n_grating_pos_per_nod = n_grating_pos / n_nod_cycles
+            # it should be at least one ?
+            #if n_grating_pos_per_nod < 1:
+            #    n_grating_pos_per_nod = 1
             # time of one nod, based on the number of grating positions on the nod, seconds.
             t_nod_grating = t_grating_pos_use * n_grating_pos_per_nod # We want it to be 30
             # time interval of AB nod pair
@@ -1588,6 +1662,14 @@ class TableWidget(QWidget):
         # Automatic build
         self.buildObs()
         
+    def selectSctdir(self):
+        dir = QFileDialog.getExistingDirectory(self, "Select Output Directory", 
+                                               self.var['scandesdir'],
+                                               QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
+        if dir != '':
+            self.var['scandesdir'] = dir
+            self.sctdir.setText(dir)
+        
     def writeObs(self):
         """
         Write observation.
@@ -1595,6 +1677,16 @@ class TableWidget(QWidget):
         scan = ScanDescription()
         # make map
         print('Making ' + self.var['pattern'] + ' map.')
+
+        # Empty directory
+        dir = os.path.join(self.var['scandesdir'], self.var['obsid'])
+        if not os.path.exists(dir):
+            os.mkdir(dir)
+        else:
+            files = os.listdir(dir)
+            for f in files:
+                os.remove(os.path.join(dir, f))        
+        
         if self.var['pattern'] == 'Inward spiral':
             self.var['map_lambda'].reverse()
             self.var['map_beta'].reverse()
@@ -1759,7 +1851,8 @@ class TableWidget(QWidget):
         scanfilename = '{0:05d}_{1:s}_'.format(scannum, self.var['obsid']) + \
                 str(int(round(self.var['map_laston_lambda']))).strip() + '_' +  \
                 str(int(round(self.var['map_laston_beta']))).strip() + '_A.scn'
-        scanfilepath = os.path.join(self.var['scandesdir'], self.var['obsid'], scanfilename)        
+        scanfilepath = os.path.join(self.var['scandesdir'], self.var['obsid'], scanfilename)  
+        print('scanfilepath ', scanfilepath)
         # print scanfilename
         check = s.check()
         if check[0] == 'NoErrors':
@@ -1973,8 +2066,11 @@ class TableWidget(QWidget):
                 else:
                     print('Unknown key ',key)
         # Call writing routine
-        writeSct(sctPars, self.sctfile)
+        #writeSct(sctPars, self.sctfile)
         
+        writeSct(sctPars, os.path.join(self.var['scandesdir'], self.var['obsid'])+'.sct')
+
+
 class ScanDescription(QObject):
     """ Scan Description class """
     MAX_GR_STEP = int(10000) * int(1024)  # in grating units, 1024*inductosyn
