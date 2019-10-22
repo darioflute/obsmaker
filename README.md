@@ -1,2 +1,2 @@
 # obsmaker
-Observation maker for FIFI-LS
+Tool to program FIFI-LS observations starting from AOR files produced with USPOT.
