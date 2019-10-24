@@ -26,7 +26,8 @@ class GUI(QMainWindow):
         # Add dialog to main layout
         self.TW = TableWidget(self)
         mainLayout.addWidget(self.TW)
-        self.mapListPath = ''
+        self.mapListPath = os.getcwd()
+        self.sctpath = os.getcwd()
         #self.TWdictionary()
         self.defineActions()
         self.show()
@@ -97,6 +98,7 @@ class GUI(QMainWindow):
         """Load a sct file."""
         fd = QFileDialog()
         fd.setLabelText(QFileDialog.Accept, "Import")
+        fd.setDirectory(self.sctpath)
         fd.setNameFilters(["Fits Files (*.sct)", "All Files (*)"])
         fd.setOptions(QFileDialog.DontUseNativeDialog)
         fd.setViewMode(QFileDialog.List)
@@ -112,11 +114,11 @@ class GUI(QMainWindow):
             self.TW.sctfile = sctfile
             self.aorParameters = readSct(sctfile)
             self.TW.update(self.aorParameters)
-            sctpath = os.path.dirname(os.path.abspath(sctfile))
-            self.TW.sctdir.setText(sctpath)
+            self.sctpath = os.path.dirname(os.path.abspath(sctfile))
+            # self.TW.sctdir.setText(sctpath) Initiliaze with path of read file
             mapfile = os.path.basename(self.TW.mapListPath)
-            self.TW.pathFile = sctpath
-            self.TW.mapListPath = os.path.join(sctpath, mapfile)
+            self.TW.pathFile = self.sctpath
+            self.TW.mapListPath = os.path.join(self.sctpath, mapfile)
             mapfile = self.TW.mapListPath
             print('mapfile ', mapfile)
             if len(mapfile) > 0:

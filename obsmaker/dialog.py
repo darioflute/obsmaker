@@ -48,7 +48,7 @@ class TableWidget(QWidget):
         self.col3 = createWidget('F', self.tab1.layout)
         
         # Default
-        self.mapListPath = ''
+        self.mapListPath = os.getcwd()
         
         # Col 1
         c1 = self.col1.layout
@@ -66,7 +66,7 @@ class TableWidget(QWidget):
         c1.addRow(self.buildObservation, self.writeObservation)
 
         c1.addRow(QLabel('Top directory to save sct files'),None)
-        self.sctdir = QLineEdit('')
+        self.sctdir = QLineEdit(os.getcwd())
         self.sctdir.setReadOnly(True)
         self.selectSctdirectory = createButton('Select')
         self.selectSctdirectory.clicked.connect(self.selectSctdir)
@@ -160,9 +160,6 @@ class TableWidget(QWidget):
         self.rawIntTime = createEditableBox('', 40, 'Raw integration time (s): ', c3, 'double')
         self.onsourceIntTime = createEditableBox('', 40, 'On source integration time (s): ', c3)
         self.estObsTime = createEditableBox('', 40, 'Estimated observation time (s): ', c3)
-
-        
-        
         
         # Arrays tab
         self.col4 = createWidget('F', self.tab2.layout)
@@ -247,6 +244,8 @@ class TableWidget(QWidget):
         
         # Defaults
         self.setDefaults()
+        #self.var['scandesdir'] = os.getcwd()
+        #pint('var scandesdir is ', self.var['scandesdir'])
         
     def setDefaults(self):
         self.chopPhaseChange(0)
@@ -809,7 +808,7 @@ class TableWidget(QWidget):
         # get any other values from the GUI
         self.var['ch_scheme'] = self.chopScheme.currentText()
         self.var['symmetry'] = self.observingMode.currentText()
-        self.var['scandesdir'] = self.pathFile  # Same directory where the AOR files are read
+        self.var['scandesdir'] = self.sctdir.text()  # Same directory where the AOR files are read
         
         # calculate any "support" variables needed
         self.var['target_lambda_hms'] = self.var['target_lambda']
@@ -1663,8 +1662,7 @@ class TableWidget(QWidget):
         self.buildObs()
         
     def selectSctdir(self):
-        dir = QFileDialog.getExistingDirectory(self, "Select Output Directory", 
-                                               self.var['scandesdir'],
+        dir = QFileDialog.getExistingDirectory(self, "Select Output Directory", self.var['scandesdir'],
                                                QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
         if dir != '':
             self.var['scandesdir'] = dir
