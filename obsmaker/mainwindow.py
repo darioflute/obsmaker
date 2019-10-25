@@ -60,14 +60,19 @@ class GUI(QMainWindow):
             tree = ET.ElementTree(file=aorfile)  # or tree = ET.parse(aorfile)
             vector = tree.find('list/vector')
             # Extract Target and Instrument from each AOR
-            targets = [(item.text) for item in vector.findall(
-                    'Request/target/name')]
-            instruments = [(item.text) for item in vector.findall(
-                           'Request/instrument/data/InstrumentName')]
+            targets = [(item.text) for item in vector.findall('Request/target/name')]
+            instruments = [(item.text) for item in vector.findall('Request/instrument/data/InstrumentName')]
+            print('targets ', targets)
+            print('instruments ', instruments)
             # Unique combinations of target and instrument
             target_inst=list(set(zip(targets,instruments)))
             # get Proposal ID
             PropID = tree.find('list/ProposalInfo/ProposalID').text
+            PI = tree.find('list/ProposalInfo/Investigator')
+            #PIname = PI.attrib['Honorific'] + ' ' + PI.attrib['FirstName'] + ' ' + PI.attrib['LastName']
+            PIname = PI.attrib['FirstName'] + ' ' + PI.attrib['LastName']
+            print('Proposal ID ', PropID)
+            print('Proposer ', PIname)
             if PropID == None:
                 PropID = "00_0000"    # indicates no PropID
             for combo in target_inst:  # Loop over Target-Instrument combo
@@ -91,7 +96,7 @@ class GUI(QMainWindow):
                         # FIFI-LS wants sct and map files to be in the same directory
                         # as the input aorfile, so set that as outdir
                         print('write translated AOR')
-                        errmsg += writeFAOR(obs, PropID, os.path.dirname(os.path.abspath(aorfile)))
+                        errmsg += writeFAOR(obs, PropID, PIname, os.path.dirname(os.path.abspath(aorfile)))
             return errmsg
         
     def loadTemplate(self):

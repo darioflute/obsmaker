@@ -55,7 +55,7 @@
 "obs_con_blue_pixelsize" : 800.00,
 
 "keywords" : [
-	  "OBSMODE",
+    "OBSMODE",
     "PRIMARYARRAY",
     "NODPATTERN",
     "REWIND",
@@ -125,7 +125,10 @@
     "BLUE_CHOPCYC",
     "BLUE_GRTCYC",
     "BLUE_ZBIAS",
-    "BLUE_BIASR" ],
+    "BLUE_BIASR",
+    "PROPID",
+    "PINAME"
+],
 
 "MAPCOORD_SYSTEM_default" : "J2000",
 "PATTERN_default" : "File",

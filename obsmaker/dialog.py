@@ -79,6 +79,9 @@ class TableWidget(QWidget):
         self.filegpIDblue = createEditableBox('None', 40, 'File Group ID Blue: ', c1)        
         self.sourceType = addComboBox('Source type: ', self.sourcetypes, c1 )
         self.aorID = createEditableBox('None', 40, 'AOR ID: ', c1)
+        self.propID = createEditableBox('None', 40, 'PROP ID: ', c1)
+        self.piName = createEditableBox('None', 40, 'PI name: ', c1)
+        self.piName.textEdited.connect(self.piNameUpdated)
         self.targetName = createEditableBox('None', 40, 'Target name: ', c1)
         self.targetRA = createEditableBox('00 00 00.0', 40, 'Target RA: ', c1)
         self.targetDec = createEditableBox('+00 00 00.0', 40, 'Target Dec: ', c1)
@@ -274,6 +277,14 @@ class TableWidget(QWidget):
             self.blueOffsetUnits.setCurrentIndex(index)
         except:
             print('Wrong value inserted')
+            
+    def piNameUpdated(self):
+        """Action triggered by PI Name box."""
+        try:
+            piname = self.piName.text()
+            self.var['piname'] = piname
+        except:
+            print('Invalid PI name')
         
     def redOffsetUpdated(self):
         """Action triggered by changing velocity of red line."""
@@ -630,6 +641,8 @@ class TableWidget(QWidget):
                 'INSTMODE'	       :self.instrumentalMode,
                 'OBSID'		       :self.observationID,
                 'AORID'		       :self.aorID,
+                'PROPID'           :self.propID,
+                'PINAME'           :self.piName,
                 'FILEGP_R'	       :self.filegpIDred,
                 'FILEGP_B'	       :self.filegpIDblue,
                 'REDSHIFT'	       :self.redshift,
@@ -1926,6 +1939,8 @@ class TableWidget(QWidget):
         """
         s.scn['target_name'] = self.var['target_name']
         s.scn['aorid'] = self.var['aorid']
+        s.scn['propid'] = self.var['propid']
+        s.scn['piname'] = self.var['piname']
         s.scn['filegp_r'] = self.var['filegp_r']
         s.scn['filegp_b'] = self.var['filegp_b']
         s.scn['obstype'] = self.var['obstype']
@@ -2093,6 +2108,8 @@ class ScanDescription(QObject):
         """ initialize """
         self.scn = {
             'aorid': 'NONE',    # aor_id
+            'propid': 'NONE',   # Proposal ID
+            'piname': 'NONE', # Principal investigator name
             'filegp_r': 'NONE',
             'filegp_b': 'NONE',
             'obstype': 'NONE',
@@ -2360,6 +2377,10 @@ class ScanDescription(QObject):
         file.write('#    ASTRONOMY\n')
         file.write('%s%s%s' % ("AOR_ID".ljust(12),  # adjust ljust param
             ('"' + self.scn["aorid"] + '"').ljust(20), '# from DCS\n'))
+        file.write('%s%s%s' % ("PROP_ID".ljust(12),  # adjust ljust param
+            ('"' + self.scn["propid"] + '"').ljust(20), '# from DCS\n'))
+        file.write('%s%s%s' % ("PI_NAME".ljust(12),  # adjust ljust param
+            ('"' + self.scn["piname"] + '"').ljust(20), '# from DCS\n'))
         file.write('%s%s%s' % ("FILEGP_R".ljust(12),
             ('"' + self.scn["filegp_r"] + '"').ljust(20),
             '# file group id RED for DPS use\n'))

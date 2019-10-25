@@ -137,12 +137,11 @@ def readAOR(vector):
                 for node in nodes:
                     data.append(node.text)
                 aor[tag] = data
-        # if the tag does not exist, set the value to a list with an empty
-        # element
+        # if the tag does not exist, set the value to a list with an empty element
         else: aor[tag] = ['']
     return aor
 
-def writeFAOR(aor, PropID, outdir):
+def writeFAOR(aor, PropID, PIname, outdir):
     '''
     writes files for input into FIFI-LS ObservationMaker
     input: output of FI_read_aor
@@ -219,8 +218,7 @@ def writeFAOR(aor, PropID, outdir):
 
     values['TARGET_NAME'] = (aor['name'])[0].replace(" ", "_")
     values['AORID'] = (aor['aorID'])[0].replace(" ", "_")
-    values['OBSID'] = values['TARGET_NAME'].replace('@', '') + '_' + \
-        replaceBadChar(aor['title'][0])
+    values['OBSID'] = values['TARGET_NAME'].replace('@', '') + '_' + replaceBadChar(aor['title'][0])
     values['SRCTYPE'] = (aor['SourceType'])[0].upper()
     values['INSTMODE'] = (aor['ObsPlanMode'])[0]
 
@@ -232,8 +230,7 @@ def writeFAOR(aor, PropID, outdir):
     # convert ra, dec in decimal degrees to hh mm ss, dd mm ss
     ihr, imin, xsec, ideg, imn, xsc = radec(ra, dec)
     sra =  str(ihr) + ' ' + str(imin) + ' ' + str(round(xsec, 2))
-    sdec = '+' * (ideg >= 0) + str(ideg) + ' ' + str(imn) + ' ' +  \
-        str(round(xsc, 1))
+    sdec = '+' * (ideg >= 0) + str(ideg) + ' ' + str(imn) + ' ' + str(round(xsc, 1))
     values['TARGET_LAMBDA'] = sra
     values['TARGET_BETA'] = sdec
 
@@ -256,15 +253,13 @@ def writeFAOR(aor, PropID, outdir):
     if len(aor['deltaRaV']) == 1:
         mapoffsets = np.array([aor['deltaRaV']] + [aor['deltaDecW']])
     else:
-        mapoffsets = np.array([aor['deltaRaV'], aor['deltaDecW']])
-    #print mapoffsets
+        mapoffsets = np.array([aor['deltaRaV'], aor['deltaDecW']])    #print mapoffsets
 
     rot_mapoffsets = np.transpose(np.dot(np.transpose(r), mapoffsets))
     if len(aor['deltaRaV']) == 1:
         values['DITHMAP_NUMPOINTS'] = 1
     else:
         values['DITHMAP_NUMPOINTS'] = len(rot_mapoffsets)
-    #print rot_mapoffsets, len(rot_mapoffsets)
 
     values['CHOPCOORD_SYSTEM'] = (aor['ChopAngleCoordinate'])[0]
     values['CHOP_AMP'] = float((aor['ChopThrow'])[0])/2.
@@ -272,7 +267,6 @@ def writeFAOR(aor, PropID, outdir):
         # CCW from N in SSpot, S of E in ObsMaker
 
     if (values['CHOPCOORD_SYSTEM'] == 'HORZION') and (aor['ChopAngle'] != 0):
-        # print "NON-ZERO CHOP ANGLE WITH HORIZON"
         errmsg += "NON-ZERO CHOP ANGLE WITH HORIZON\n"
     if values['CHOPCOORD_SYSTEM'] == 'HORIZON':
         values['CHOP_POSANG'] = 0
@@ -434,7 +428,10 @@ def writeFAOR(aor, PropID, outdir):
     else:
         values['MAPLISTPATH'] = values['TARGET_NAME'].replace('@', '') + \
             '_' + replaceBadChar(aor['title'][0]) + '_%03d_map.txt' % i
-    #pprint(values)
+    # Add extra keywords
+    values['PROPID'] = PropID
+    values['PINAME'] = PIname
+
     #write contents
     outfile = open(fn, 'w')
     for item in keywords:
