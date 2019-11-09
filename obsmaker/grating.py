@@ -25,10 +25,10 @@ def inductosyn2wavelength(gratpos, dichroic, array, order, obsdate=''):
 
     path0 = os.path.dirname(os.path.realpath(__file__))
     wvdf = pd.read_csv(os.path.join(path0, 'data', 'CalibrationResults.csv'), header=[0, 1])
-    ndates = (len(wvdf.columns) - 2) // 5
+    ndates = (len(wvdf.columns) - 2) // 4
     dates = np.zeros(ndates)
     for i in range(ndates):
-        dates[i] = wvdf.columns[2 + i * 5][0]
+        dates[i] = wvdf.columns[2 + i * 4][0]
 
     # Select correct date
     for i, date in enumerate(dates):
@@ -36,7 +36,7 @@ def inductosyn2wavelength(gratpos, dichroic, array, order, obsdate=''):
             pass
         else:
             break
-    cols = range(2 + 5 * i , 2 + 5 * i + 5)
+    cols = range(2 + 4 * i , 2 + 4 * i + 4)
     w1 = wvdf[wvdf.columns[cols]].copy()
     if channel == 'R':
         if dichroic == 105:
@@ -46,10 +46,7 @@ def inductosyn2wavelength(gratpos, dichroic, array, order, obsdate=''):
     elif channel == 'B1':
         co = w1.columns[2]
     else:
-        if dichroic == 105:
-            co = w1.columns[3]
-        else:
-            co = w1.columns[4]
+        co = w1.columns[3]
 
     g0 = w1.iloc[0][co]
     NP = w1.iloc[1][co]
