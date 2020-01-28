@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QWidget, QTabWidget,QVBoxLayout, QComboBox, 
-                             QLabel, QLineEdit, QMessageBox, QFileDialog)
+                             QLabel, QLineEdit, QMessageBox, QFileDialog, QSizePolicy)
 from PyQt5.QtCore import Qt, QObject
 from PyQt5.QtGui import QIntValidator
 import os
@@ -49,6 +49,7 @@ class TableWidget(QWidget):
         
         # Default
         self.mapListPath = os.getcwd()
+        self.timePerPoint = 0
         
         # Col 1
         c1 = self.col1.layout
@@ -67,65 +68,70 @@ class TableWidget(QWidget):
 
         c1.addRow(QLabel('Top directory to save sct files'),None)
         self.sctdir = QLineEdit(os.getcwd())
+        self.sctdir.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        self.sctdir.setMinimumWidth(250)
         self.sctdir.setReadOnly(True)
         self.selectSctdirectory = createButton('Select')
         self.selectSctdirectory.clicked.connect(self.selectSctdir)
         c1.addRow(self.selectSctdirectory, self.sctdir)
 
-        self.observationID = createEditableBox("None", 40, "Observation ID: ", c1)
+        self.observationID = createEditableBox("None", 200, "Observation ID: ", c1)
         self.observationType = addComboBox('Observation type: ', self.obstypes, c1)
        
-        self.filegpIDred = createEditableBox('None', 40, 'File Group ID Red: ', c1)
-        self.filegpIDblue = createEditableBox('None', 40, 'File Group ID Blue: ', c1)        
+        self.filegpIDred = createEditableBox('None', 150, 'File Group ID Red: ', c1)
+        self.filegpIDblue = createEditableBox('None', 150, 'File Group ID Blue: ', c1)        
         self.sourceType = addComboBox('Source type: ', self.sourcetypes, c1 )
-        self.aorID = createEditableBox('None', 40, 'AOR ID: ', c1)
-        self.propID = createEditableBox('None', 40, 'PROP ID: ', c1)
-        self.piName = createEditableBox('None', 40, 'PI name: ', c1)
+        self.aorID = createEditableBox('None', 100, 'AOR ID: ', c1)
+        self.propID = createEditableBox('None', 100, 'PROP ID: ', c1)
+        self.piName = createEditableBox('None', 150, 'PI name: ', c1)
         self.piName.textEdited.connect(self.piNameUpdated)
-        self.targetName = createEditableBox('None', 40, 'Target name: ', c1)
-        self.targetRA = createEditableBox('00 00 00.0', 40, 'Target RA: ', c1)
-        self.targetDec = createEditableBox('+00 00 00.0', 40, 'Target Dec: ', c1)
-        self.redshift = createEditableBox('0', 40, 'Redshift [z]: ', c1, 'double')
+        self.targetName = createEditableBox('None', 120, 'Target name: ', c1)
+        self.targetRA = createEditableBox('00 00 00.0', 120, 'Target RA: ', c1)
+        self.targetDec = createEditableBox('+00 00 00.0', 120, 'Target Dec: ', c1)
+        self.redshift = createEditableBox('0', 120, 'Redshift [z]: ', c1, 'double')
         self.redshift.textEdited.connect(self.redshiftUpdated)
-        self.detectorAngle = createEditableBox('0', 40, 'Detector angle (E of N): ', c1, 'double')
+        self.velocity = createEditableBox('0', 100, 'Velocity [cz]: ', c1, 'double')
+        self.velocity.textEdited.connect(self.velocityUpdated)
+        self.detectorAngle = createEditableBox('0', 70, 'Detector angle (E of N): ', c1, 'double')
         self.observingmodes = ["Symmetric", "Asymmetric"]
         #observingmodes = ["Beam switching", "Unmatched nodding"]
         self.observingMode = addComboBox('Observing mode: ', self.observingmodes, c1)
         self.observingMode.currentIndexChanged.connect(self.obsModeChange)
         self.instrumentalMode = addComboBox('Instrumental mode: ', self.instmodes, c1)
+        self.instrumentalMode.currentIndexChanged.connect(self.instrumentalModeChange)
         self.primaryArrays = ["RED", "BLUE", "cmd"]
         self.primaryArray = addComboBox('Primary array: ', self.primaryArrays, c1)
         self.primaryArray.currentIndexChanged.connect(self.primaryArrayChange)
-        self.setpoint = createEditableBox('', 40, 'Set setpoint: ', c1)
+        self.setpoint = createEditableBox('', 70, 'Set setpoint: ', c1)
         # Col 2
         c2 = self.col2.layout
         c2.addRow(QLabel('Nod Pattern'),None)
         self.nodpatterns = ['ABBA','AB','A','ABA','AABAA']
         self.nodPattern = addComboBox('Nod pattern: ', self.nodpatterns, c2)
         self.nodPattern.currentIndexChanged.connect(self.nodPatternChange)
-        self.nodcyclesPerMapPosition = createEditableBox('1', 40, 'Nod cycles per map position: ', c2, 'int')
+        self.nodcyclesPerMapPosition = createEditableBox('1', 70, 'Nod cycles per map position: ', c2, 'int')
         self.gratingDirections = ['Up','Down','None','Split']
         self.gratingDirection = addComboBox('Grating direction: ', self.gratingDirections, c2)
         self.gratingDirection.currentIndexChanged.connect(self.gratingDirectionChange)
-        self.scanFilesPerSplit = createEditableBox('n/a', 40, 'Scan files per split: ', c2)
+        self.scanFilesPerSplit = createEditableBox('n/a', 70, 'Scan files per split: ', c2)
         self.rewindMode = addComboBox('LOS rewind mode: ', ['Auto', 'Manual'], c2)
 
         c2.addRow(QLabel('Off position'),None)
         self.offpositions = ['Matched', 'Absolute', 'Relative to target', 'Relative to active map pos']
         self.offPosition = addComboBox('Off position: ', self.offpositions, c2)
         self.offPosition.currentIndexChanged.connect(self.offPosChange)
-        self.lambdaOffPos = createEditableBox('', 40, 'Lambda [arcsec]:', c2, 'double')
-        self.betaOffPos = createEditableBox('', 40, 'Beta [arcsec]:', c2, 'double')
-        self.mapOffPos = createEditableBox('', 40, 'Offpos map reduction: ', c2)
+        self.lambdaOffPos = createEditableBox('', 70, 'Lambda [arcsec]:', c2, 'double')
+        self.betaOffPos = createEditableBox('', 70, 'Beta [arcsec]:', c2, 'double')
+        self.mapOffPos = createEditableBox('', 70, 'Offpos map reduction: ', c2)
         c2.addRow(QLabel('Mapping pattern'),None)
         c2.addRow(QLabel('Map center offset from target'),None)
         self.coordSysMap = addComboBox('Coordinate system: ', self.mapcoordsys, c2)        
-        self.lambdaMapCenter = createEditableBox('0', 40, 'Lambda [arcsec]: ', c2, 'double')
-        self.betaMapCenter = createEditableBox('0', 40, 'Beta [arcsec]: ', c2, 'double')
+        self.lambdaMapCenter = createEditableBox('0', 70, 'Lambda [arcsec]: ', c2, 'double')
+        self.betaMapCenter = createEditableBox('0', 70, 'Beta [arcsec]: ', c2, 'double')
         self.mapPattern = addComboBox('Mapping pattern: ', self.refpatterns, c2)
         self.mapPattern.currentIndexChanged.connect(self.mapPatternChange)
-        self.noMapPoints = createEditableBox('1', 40,'No of map points: ',c2, 'int')
-        self.mapStepSize = createEditableBox('n/a', 40, 'Step size [arcsec]: ', c2)
+        self.noMapPoints = createEditableBox('1', 150,'No of map points: ',c2, 'int')
+        self.mapStepSize = createEditableBox('n/a', 70, 'Step size [arcsec]: ', c2)
         self.loadMapPatternFile = createButton('Load file')
         c2.addRow(QLabel('Mapping pattern: '), self.loadMapPatternFile)
         
@@ -134,35 +140,35 @@ class TableWidget(QWidget):
         c3.addRow(QLabel('Chopper setup'),None)
         self.chopScheme = addComboBox('Chop scheme: ', self.chopschemes, c3)
         self.coordSysChop = addComboBox('Coordinate system: ', self.chopcoordsys, c3)        
-        self.chopAmp = createEditableBox('', 40,'Chop amplitude (1/2 throw): ', c3, 'double')
-        self.chopPosAngle = createEditableBox('', 40,'Chop pos angle (S of E): ', c3, 'double')
-        self.chopPhase = createEditableBox(str(self.chop_phase_default), 40)
+        self.chopAmp = createEditableBox('', 70,'Chop amplitude (1/2 throw): ', c3, 'double')
+        self.chopPosAngle = createEditableBox('', 70,'Chop pos angle (S of E): ', c3, 'double')
+        self.chopPhase = createEditableBox(str(self.chop_phase_default), 70)
         self.chopPhaseMode = QComboBox()
         self.chopPhaseMode.addItems(["Default", "Manual"])
         self.chopPhaseMode.currentIndexChanged.connect(self.chopPhaseChange)
         add2widgets('Chopper Phase: ', self.chopPhaseMode, self.chopPhase, c3)
-        self.chopLengthFrequency = createEditableBox('', 40, 'Chop frequency [Hz] ', c3, 'double')
-        self.chopLengthSamples = createEditableBox('64', 40, 'Chop samples per position ', c3, 'double')
+        self.chopLengthFrequency = createEditableBox('', 70, 'Chop frequency [Hz] ', c3, 'double')
+        self.chopLengthSamples = createEditableBox('64', 70, 'Chop samples per position ', c3, 'double')
         self.trackingInB = addComboBox('Tracking in pos B: ', ['On', 'Off'], c3) 
         c3.addRow(QLabel('Input params per mapping position'),None)
-        self.onSourceTimeChop = createEditableBox('', 40, 'On-source time: ', c3, 'double')
-        self.noGratPosChop = createEditableBox('', 40, 'No of grating positions:  ', c3, 'int')
-        self.totMapPositions = createEditableBox('1', 40, 'Total no of mapping positions: ', c3, 'int')
+        self.onSourceTimeChop = createEditableBox('', 70, 'On-source time: ', c3, 'double')
+        self.noGratPosChop = createEditableBox('', 70, 'No of grating positions:  ', c3, 'int')
+        self.totMapPositions = createEditableBox('1', 70, 'Total no of mapping positions: ', c3, 'int')
         self.chopCompute = createButton('Compute')
         self.chopCompute.setEnabled(False)
         self.chopCompute.clicked.connect(self.grating_xls)
         c3.addRow(self.chopCompute, None)
-        self.nodCycles = createEditableBox('', 40, 'No of nod cycles: ', c3)
-        self.ccPerGratPos = createEditableBox('', 40, 'No of CC per grating pos: ', c3)
+        self.nodCycles = createEditableBox('', 70, 'No of nod cycles: ', c3)
+        self.ccPerGratPos = createEditableBox('', 70, 'No of CC per grating pos: ', c3)
         self.loadScanDescriptionFile= createButton('Load file')
-        self.noGratPos4Nod = createEditableBox('', 40, 'No of grating pos per nod: ', c3)
-        self.gratCycle4Nod = createEditableBox('', 40, 'Grating cycle per nod (30.0): ', c3)
-        self.timeCompleteMap = createEditableBox('', 40, 'Time to complete map [min]: ', c3)
+        self.noGratPos4Nod = createEditableBox('', 70, 'No of grating pos per nod: ', c3)
+        self.gratCycle4Nod = createEditableBox('', 70, 'Grating cycle per nod (30.0): ', c3)
+        self.timeCompleteMap = createEditableBox('', 70, 'Time to complete map [min]: ', c3)
 
         c3.addRow(QLabel('Observing stats'),None)
-        self.rawIntTime = createEditableBox('', 40, 'Raw integration time (s): ', c3, 'double')
-        self.onsourceIntTime = createEditableBox('', 40, 'On source integration time (s): ', c3)
-        self.estObsTime = createEditableBox('', 40, 'Estimated observation time (s): ', c3)
+        self.rawIntTime = createEditableBox('', 70, 'Raw integration time (s): ', c3, 'double')
+        self.onsourceIntTime = createEditableBox('', 70, 'On source integration time (s): ', c3)
+        self.estObsTime = createEditableBox('', 70, 'Estimated observation time (s): ', c3)
         
         # Arrays tab
         self.col4 = createWidget('F', self.tab2.layout)
@@ -171,11 +177,12 @@ class TableWidget(QWidget):
         # Column 4 (Red array)
         c4 = self.col4.layout
         self.gratpatterns = ['Centre', 'Dither', 'Inward dither', 'Start']
-        c4.addRow(QLabel('Red Array.  [100-210 um]'),None)
+        c4.addRow(QLabel('Red Array.  [105-205 um]'),None)
         self.setDichroic = addComboBox('Dichroic: ', ['105', '130'], c4)
+        self.setDichroic.currentIndexChanged.connect(self.dichroicChange)
         c4.addRow(QLabel(''),None)
         self.redLine = addComboBox('Line: ', self.redlines, c4)
-        self.redWave = createEditableBox('', 50, 'Wavelength [um]', c4, 'double')
+        self.redWave = createEditableBox('', 70, 'Wavelength [um]', c4, 'double')
         self.redLine.currentIndexChanged.connect(self.redLineChange)
         self.redOffsetUnits = QComboBox()
         self.redOffsetUnits.addItems(["kms", "um", "units"])
@@ -183,24 +190,24 @@ class TableWidget(QWidget):
         self.redOffset.setValidator(QIntValidator())
         self.redOffset.textEdited.connect(self.redOffsetUpdated)
         add2widgets('Line offset: ', self.redOffset, self.redOffsetUnits, c4)
-        self.redGratPosMicron = createEditableBox('', 50, 'Grating position [um]: ', c4)
-        self.redGratPosUnits = createEditableBox('', 50, 'Grating position [unit]: ', c4)
+        self.redGratPosMicron = createEditableBox('', 70, 'Grating position [um]: ', c4)
+        self.redGratPosUnits = createEditableBox('', 70, 'Grating position [unit]: ', c4)
         c4.addRow(QLabel('Spectral mode'),None)
         self.redGratPattern = addComboBox('Grating movement pattern: ', self.gratpatterns, c4)
-        self.redStepSizeUp = createEditableBox('0', 40, 'Step size up [pixels]: ', c4, 'double')
-        self.redGratPosUp = createEditableBox('1', 40, 'Grating position up: ', c4, 'int')
-        self.redStepSizeDown = createEditableBox('0', 40, 'Step size down [pixels]: ', c4, 'double')
-        self.redGratPosDown = createEditableBox('0', 40, 'Grating position down: ', c4, 'int')
+        self.redStepSizeUp = createEditableBox('0', 70, 'Step size up [pixels]: ', c4, 'double')
+        self.redGratPosUp = createEditableBox('1', 70, 'Grating position up: ', c4, 'int')
+        self.redStepSizeDown = createEditableBox('0', 70, 'Step size down [pixels]: ', c4, 'double')
+        self.redGratPosDown = createEditableBox('0', 70, 'Grating position down: ', c4, 'int')
         c4.addRow(QLabel('Timing and sensitivity'),None)
-        self.redRampLengthSamples = createEditableBox('32', 40, 'Ramp length [samples]: ', c4)
-        self.redRampLengthMs = createEditableBox('32', 40, 'Ramp length [ms]: ', c4)
-        self.redRamp4ChopPos = createEditableBox('', 40, 'Ramps per chop pos: ', c4)
-        self.redCC4ChopPos = createEditableBox('1', 40, 'CC per chop pos: ', c4)
-        self.redGratCycles = createEditableBox('1', 40, 'Number of grating cycles: ', c4)
-        self.redZeroBias = createEditableBox('60', 40, 'Zero bias [mV]: ', c4)
-        self.redBiasR = createEditableBox('0', 40, 'BiasR [mV]: ', c4)
+        self.redRampLengthSamples = createEditableBox('32', 70, 'Ramp length [samples]: ', c4)
+        self.redRampLengthMs = createEditableBox('32', 70, 'Ramp length [ms]: ', c4)
+        self.redRamp4ChopPos = createEditableBox('', 70, 'Ramps per chop pos: ', c4)
+        self.redCC4ChopPos = createEditableBox('1', 70, 'CC per chop pos: ', c4)
+        self.redGratCycles = createEditableBox('1', 70, 'Number of grating cycles: ', c4)
+        self.redZeroBias = createEditableBox('60', 70, 'Zero bias [mV]: ', c4)
+        self.redBiasR = createEditableBox('0', 70, 'BiasR [mV]: ', c4)
         self.redCapacitor = addComboBox('Capacitor [uF]: ', self.capacitors, c4)
-        self.redScanFileLength = createEditableBox('', 40, 'Scan file length [s]: ', c4)
+        self.redScanFileLength = createEditableBox('', 70, 'Scan file length [s]: ', c4)
         
         # Column 5 (Blue array)
         c5 = self.col5.layout
@@ -210,31 +217,31 @@ class TableWidget(QWidget):
         self.setFilter = addComboBox('Filter: ', ['1', '2'], c5)
         self.blueLine = addComboBox('Line: ', self.bluelines, c5) 
         self.blueLine.currentIndexChanged.connect(self.blueLineChange)
-        self.blueWave = createEditableBox('', 50, 'Wavelength [um]', c5)
+        self.blueWave = createEditableBox('', 70, 'Wavelength [um]', c5)
         self.blueOffsetUnits = QComboBox()
         self.blueOffsetUnits.addItems(["kms", "um", "units"])
         self.blueOffset = QLineEdit('0')
         self.blueOffset.setValidator(QIntValidator())
         self.blueOffset.textEdited.connect(self.blueOffsetUpdated)
         add2widgets('Line offset: ', self.blueOffset, self.blueOffsetUnits, c5)
-        self.blueGratPosMicron = createEditableBox('', 50, 'Grating position [um]: ', c5)
-        self.blueGratPosUnits = createEditableBox('', 50, 'Grating position [unit]: ', c5)
+        self.blueGratPosMicron = createEditableBox('', 70, 'Grating position [um]: ', c5)
+        self.blueGratPosUnits = createEditableBox('', 70, 'Grating position [unit]: ', c5)
         c5.addRow(QLabel('Spectral mode'),None)
         self.blueGratPattern = addComboBox('Grating movement pattern: ', self.gratpatterns, c5)
-        self.blueStepSizeUp = createEditableBox('0', 40, 'Step size up [pixels]: ', c5)
-        self.blueGratPosUp = createEditableBox('1', 40, 'Grating position up: ', c5)
-        self.blueStepSizeDown = createEditableBox('0', 40, 'Step size down [pixels]: ', c5)
-        self.blueGratPosDown = createEditableBox('0', 40, 'Grating position down: ', c5)
+        self.blueStepSizeUp = createEditableBox('0', 70, 'Step size up [pixels]: ', c5)
+        self.blueGratPosUp = createEditableBox('1', 70, 'Grating position up: ', c5)
+        self.blueStepSizeDown = createEditableBox('0', 70, 'Step size down [pixels]: ', c5)
+        self.blueGratPosDown = createEditableBox('0', 70, 'Grating position down: ', c5)
         c5.addRow(QLabel('Timing and sensitivity'),None)
-        self.blueRampLengthSamples = createEditableBox('32', 40, 'Ramp length [samples]: ', c5)
-        self.blueRampLengthMs = createEditableBox('32', 40, 'Ramp length [ms]: ', c5)
-        self.blueRamp4ChopPos = createEditableBox('', 40, 'Ramps per chop pos: ', c5)
-        self.blueCC4ChopPos = createEditableBox('1', 40, 'CC per chop pos: ', c5)
-        self.blueGratCycles = createEditableBox('1', 40, 'Number of grating cycles: ', c5)
-        self.blueZeroBias = createEditableBox('60', 40, 'Zero bias [mV]: ', c5)
-        self.blueBiasR = createEditableBox('0', 40, 'BiasR [mV]: ', c5)
+        self.blueRampLengthSamples = createEditableBox('32', 70, 'Ramp length [samples]: ', c5)
+        self.blueRampLengthMs = createEditableBox('32', 70, 'Ramp length [ms]: ', c5)
+        self.blueRamp4ChopPos = createEditableBox('', 70, 'Ramps per chop pos: ', c5)
+        self.blueCC4ChopPos = createEditableBox('1', 70, 'CC per chop pos: ', c5)
+        self.blueGratCycles = createEditableBox('1', 70, 'Number of grating cycles: ', c5)
+        self.blueZeroBias = createEditableBox('60', 70, 'Zero bias [mV]: ', c5)
+        self.blueBiasR = createEditableBox('0', 70, 'BiasR [mV]: ', c5)
         self.blueCapacitor = addComboBox('Capacitor [uF]: ', self.capacitors, c5)
-        self.blueScanFileLength = createEditableBox('', 40, 'Scan file length [s]: ', c5)
+        self.blueScanFileLength = createEditableBox('', 70, 'Scan file length [s]: ', c5)
         
         # Define conversion
         self.defineConversion()
@@ -270,6 +277,7 @@ class TableWidget(QWidget):
             cz = self.c * z # velocity in km/s
             self.redOffset.setText("{0:.0f}".format(cz))
             self.blueOffset.setText("{0:.0f}".format(cz))
+            self.velocity.setText("{0:.0f}".format(cz))
             # Set the units to km/s
             index = self.redOffsetUnits.findText('kms', Qt.MatchFixedString)
             self.redOffsetUnits.setCurrentIndex(index)
@@ -277,12 +285,34 @@ class TableWidget(QWidget):
             self.blueOffsetUnits.setCurrentIndex(index)
         except:
             print('Wrong value inserted')
+
+    def velocityUpdated(self):
+        """Action triggered by editing the redshift box."""
+        try:
+            cz = float(self.velocity.text())
+            # Update digits
+            z = cz / self.c
+            self.redshift.setText(str(z))
+            self.var['redshift'] = z
+            self.redshift.setText(str(round(z,8)))
+            # Update line offsets in km/s
+            self.redOffset.setText("{0:.0f}".format(cz))
+            self.blueOffset.setText("{0:.0f}".format(cz))
+            self.velocity.setText("{0:.0f}".format(cz))
+            # Set the units to km/s
+            index = self.redOffsetUnits.findText('kms', Qt.MatchFixedString)
+            self.redOffsetUnits.setCurrentIndex(index)
+            index = self.blueOffsetUnits.findText('kms', Qt.MatchFixedString)
+            self.blueOffsetUnits.setCurrentIndex(index)
+        except:
+            print('Wrong value inserted')
+
             
     def piNameUpdated(self):
         """Action triggered by PI Name box."""
         try:
-            piname = self.piName.text()
-            self.var['piname'] = piname
+            piname = self.text()
+            self.var['observer'] = piname
         except:
             print('Invalid PI name')
         
@@ -294,6 +324,7 @@ class TableWidget(QWidget):
                 z = cz / self.c
                 self.var['redshift'] = z
                 self.blueOffset.setText("{0:.0f}".format(cz))
+                self.velocity.setText("{0:.0f}".format(cz))
                 # Set the units to km/s
                 index = self.blueOffsetUnits.findText('kms', Qt.MatchFixedString)
                 self.blueOffsetUnits.setCurrentIndex(index)
@@ -311,6 +342,7 @@ class TableWidget(QWidget):
                 z = cz / self.c
                 self.var['redshift'] = z
                 self.redOffset.setText("{0:.0f}".format(cz))
+                self.velocity.setText("{0:.0f}".format(cz))
                 # Set the units to km/s
                 index = self.redOffsetUnits.findText('kms', Qt.MatchFixedString)
                 self.redOffsetUnits.setCurrentIndex(index)
@@ -325,11 +357,15 @@ class TableWidget(QWidget):
         """If new line selected, populate the wavelength."""
         if self.blueLine.currentText()  == 'Custom':
             return
-        self.blueWave.setText(str(self.bluewaves[index]))
+        wave = float(self.bluewaves[index])
+        dichroic = int(self.setDichroic.currentText())
         # Select best order
         print('current order ',self.setOrder.currentText())
-        wave = float(self.blueWave.text())
         print('wave is ', wave)
+        if dichroic < wave:
+            message = 'Blue wavelength longer than dichroic split !'
+            QMessageBox.about(self, "Dichroic", message)            
+            return
         if wave < 71.:
             order = '2'
             bfilter = '2'
@@ -337,15 +373,40 @@ class TableWidget(QWidget):
             order = '1'
             bfilter = '1'
         print('order ', order)
+        self.blueWave.setText(str(wave))
         index = self.setOrder.findText(order, Qt.MatchFixedString)
         self.setOrder.setCurrentIndex(index)
         index = self.setFilter.findText(bfilter, Qt.MatchFixedString)
         self.setFilter.setCurrentIndex(index)
         print('updated order ',self.setOrder.currentText())
         
+        
     def redLineChange(self, index):
         """If new line selected, populate the wavelength."""
-        self.redWave.setText(str(self.redwaves[index]))
+        if self.redLine.currentText()  == 'Custom':
+            return
+        # Check dichroic
+        dichroic = int(self.setDichroic.currentText())
+        redwave = float(self.redwaves[index])
+        if redwave < dichroic:
+            message = 'Red wavelength shorter than dichroic split !'
+            QMessageBox.about(self, "Dichroic", message)
+        else:
+            self.redWave.setText(str(redwave))
+
+
+    def dichroicChange(self, index):
+        """Check if lines compatible with new dichroic."""
+        dichroic = int(self.setDichroic.currentText())
+        redwave = float(self.redWave.text())
+        bluewave = float(self.blueWave.text())
+        if bluewave > dichroic:
+            message = 'Blue wavelength longer than dichroic split !'
+            QMessageBox.about(self, "Dichroic", message)
+        if redwave < dichroic:
+            message = 'Red wavelength shorter than dichroic split !'
+            QMessageBox.about(self, "Dichroic", message)
+        
 
     def chopPhaseChange(self, index):
         """Put default phase value is default is selected."""
@@ -396,6 +457,56 @@ class TableWidget(QWidget):
             self.trackingInB.label.show()
             #self.trackingInB.setEnabled(True)
             
+    def instrumentalModeChange(self, index):
+        """Reaction to change of obsMode."""
+        instmode = self.instmodes[index]
+        if instmode in ['SYMMETRIC_CHOP','SPECTRAL_SCAN','BRIGHT_OBJECT','SKY']:
+            index = self.observingMode.findText('Symmetric', Qt.MatchFixedString)
+            self.observingMode.setCurrentIndex(index)
+            index = self.offPosition.findText('Matched', Qt.MatchFixedString)
+            self.offPosition.setCurrentIndex(index)
+            # disable labels and entryboxes beneath
+            self.lambdaOffPos.setReadOnly(True)
+            self.betaOffPos.setReadOnly(True)
+            self.mapOffPos.setReadOnly(True)
+            self.lambdaOffPos.setEnabled(False)
+            self.betaOffPos.setEnabled(False)
+            self.mapOffPos.setEnabled(False)
+            # disable Tracking in B buttons
+            index = self.trackingInB.findText('On', Qt.MatchFixedString)
+            self.trackingInB.setCurrentIndex(index)
+            self.trackingInB.hide()
+            self.trackingInB.label.hide()
+            if instmode in ['SYMMETRIC_CHOP','SPECTRAL_SCAN','BRIGHT_OBJECT']:
+                if self.var['chop_amp'] == 0:
+                    self.var['chop_amp'] = 120
+                    self.chopAmp.setText('120')
+        elif instmode in ['ASYMMETRIC_CHOP','TOTAL_POWER']:
+            index = self.observingMode.findText('Asymmetric', Qt.MatchFixedString)
+            self.observingMode.setCurrentIndex(index)
+            self.var['offpos'] = 'Relative to target'
+            self.var['symmetry'] = 'Asymmetric'
+            index = self.offPosition.findText('Relative to target', Qt.MatchFixedString)
+            self.offPosition.setCurrentIndex(index)
+            # enable labels and entryboxes beneath
+            self.lambdaOffPos.setReadOnly(False)
+            self.betaOffPos.setReadOnly(False)
+            self.mapOffPos.setReadOnly(False)
+            self.lambdaOffPos.setEnabled(True)
+            self.betaOffPos.setEnabled(True)
+            self.mapOffPos.setEnabled(True)
+            # enable Tracking in B buttons
+            index = self.trackingInB.findText('Off', Qt.MatchFixedString)
+            self.trackingInB.setCurrentIndex(index)
+            self.trackingInB.show()
+            self.trackingInB.label.show()
+            if instmode == 'TOTAL_POWER':
+                self.var['chop_amp'] = 0.0 
+                self.chopAmp.setText('0')
+        else:
+            print('Unknown instrumental mode ', instmode)
+            
+
     def primaryArrayChange(self, index):
         """Changes with switch of primary array."""
         self.var['primaryarray'] =  self.primaryArrays[index]
@@ -424,7 +535,8 @@ class TableWidget(QWidget):
 
         
     def nodPatternChange(self, index):
-        """When changing nod pattern."""    
+        """When changing nod pattern."""  
+        
         self.var['nodpattern'] = self.nodpatterns[index]
         if self.var['nodpattern'] in ['AB', 'ABBA', 'A']:
             self.nodcyclesPerMapPosition.label.setText('Nod cycles per map position (n): ')
@@ -433,16 +545,19 @@ class TableWidget(QWidget):
             self.nodcyclesPerMapPosition.label.setText('Number of A positions per B (n): ')
             if self.var['nodpattern'] == 'ABA':
                 self.nodcyclesPerMapPosition.setText('2')
+                self.nodCycles.setText('2')
             else:
                 self.nodcyclesPerMapPosition.setText('4')
+                self.nodCycles.setText('4')
                 self.nodcyclesPerMapPosition.setReadOnly(False)
+        # Update observation type
         if self.var['nodpattern'] == 'A':
             self.chopAmp.setText('0')
             obstype = 'SKY'
         else:
             self.chopAmp.setText('60')
             obstype = 'OBJECT'
-        index = self.setOrder.findText(obstype, Qt.MatchFixedString)
+        index = self.observationType.findText(obstype, Qt.MatchFixedString)
         self.observationType.setCurrentIndex(index)
     
     def gratingDirectionChange(self, index):
@@ -642,7 +757,7 @@ class TableWidget(QWidget):
                 'OBSID'		       :self.observationID,
                 'AORID'		       :self.aorID,
                 'PROPID'           :self.propID,
-                'PINAME'           :self.piName,
+                'OBSERVER'         :self.piName,
                 'FILEGP_R'	       :self.filegpIDred,
                 'FILEGP_B'	       :self.filegpIDblue,
                 'REDSHIFT'	       :self.redshift,
@@ -686,18 +801,22 @@ class TableWidget(QWidget):
                 'BLUE_CHOPCYC'	   :self.blueCC4ChopPos,
                 'BLUE_GRTCYC'	   :self.blueGratCycles,
                 'BLUE_ZBIAS'	   :self.blueZeroBias,
-                'BLUE_BIASR'       :self.blueBiasR
+                'BLUE_BIASR'       :self.blueBiasR,
+                'TIME_POINT'       :self.timePerPoint
             }
         
     def update(self, aorPars):
         """Update with values from *.sct file."""
         
+        self.setDichroic.currentIndexChanged.disconnect()
         for key in aorPars.keys():
             label = self.k2tw[key]
             if isinstance(label, QLineEdit):
                 try:
                     if key == 'REDSHIFT':
                         label.setText("{0:f}".format(float(aorPars[key])))
+                        cz = self.c * float(aorPars[key]) # velocity in km/s
+                        self.velocity.setText("{0:.0f}".format(cz))
                     else:
                         label.setText(aorPars[key])
                 except:
@@ -718,25 +837,53 @@ class TableWidget(QWidget):
                 else:
                     print('Unknown key ',key)
 
-        # Check if chopper phase mode is default and put default value
+        # Check if chopper phase mode is default and put default value0
         if aorPars['CHOPPHASE'] == 'Default' :
             self.chopPhase.setText(str(self.chop_phase_default))            
+        # Update no of chopping positions (From red channel. Blue can be different.)
+        redgratposchop = int(aorPars['RED_POSUP'])+int(aorPars['RED_POSDOWN'])
+        bluegratposchop = int(aorPars['BLUE_POSUP'])+int(aorPars['BLUE_POSDOWN'])
+        gratposchop = np.max([redgratposchop, bluegratposchop])
+        self.noGratPosChop.setText('{0:0d}'.format(gratposchop))
+        # Update on-source time (TimePerPoint * Repeat * NumPtsDec * NumPtsRa)
+        timechop = int(np.rint(float(aorPars['TIME_POINT']))) * int(aorPars['NODCYCLES'])
+        self.onSourceTimeChop.setText('{0:0d}'.format(timechop))
         # Update number of points in map
         self.totMapPositions.setText(aorPars['DITHMAP_NUMPOINTS'])
         self.totMapPositions.setEnabled(False)
+        
+        # Check if wavelengths agree with dichroic
+        self.setDichroic.currentIndexChanged.connect(self.dichroicChange)
+        self.dichroicChange(0)
+        #dichroic = int(self.setDichroic.currentText())
+        #redwave  = float(self.redWave.text())
+        #bluewave = float(self.blueWave.text())
+        #print('Dichroic ', dichroic)
+        #if bluewave > dichroic:
+        #    message = 'Blue wavelength longer than dichroic split !'
+        #    QMessageBox.about(self, "Dichroic", message)
+        #if redwave < dichroic:
+        #    message = 'Red wavelength shorter than dichroic split !'
+        #    QMessageBox.about(self, "Dichroic", message)
+
 
     def buildObs(self):
         """
         Save GUI parameters and calculate observation.
         """
+        
         try:
             if self.pathFile == '':
                 message = 'Upload a template before building the observation.'
                 QMessageBox.about(self, "Build", message)
                 return                
             self.writeObservation.setEnabled(False)
+            print('nodcycles before gui2vars ', self.var['nodcycles'])
             self.gui2vars()
+            print('path file before calculate is: ', self.pathFile)
+            print('nodcycles before calculate are: ', self.var['nodcycles'])
             self.calculate()
+            print('path file after calculate is: ', self.pathFile)
             self.var['ind_scanindex'] = 0
             self.var['commandline_option'] = '0' # No command line option for the moment
             print('Observation built')
@@ -853,6 +1000,9 @@ class TableWidget(QWidget):
         # SKY mode if instmode is A
         if self.var['nodpattern'] == 'A':
             self.var['instmode'] = 'SKY'
+        # Number of grating positions
+        
+        
             
     def calculate(self):
         """
@@ -862,10 +1012,13 @@ class TableWidget(QWidget):
         if result == False:
             print("ERROR in calc_timing")
             return
+        print('path file after calctiming is: ', self.pathFile)
+
         result = self.calcInductosynPos()  # calculate inductosyn position, update GUI
         if result == False:
             print('ERROR in calc_lookup')
             return
+        print('path file after calcinductonsynpos is: ', self.pathFile)
         result = self.calcGrtpos()  # calculate grating positions and movements
         if result == False:
             print('ERROR in calc_grtpos')
@@ -901,6 +1054,7 @@ class TableWidget(QWidget):
         blue_grtcyctime_sam = self.var['blue_numgrtpos'] * blue_grtpostime_sam
 
         # override timepergrtcyc if distributing steps
+        print('Nod cycles in calcTiming ', self.var['nodcycles'])
         if self.var['nodcycles'] >= 2:
             if self.var['scandist'] == 'Up':
                 if self.var['red_posup'] <= 1:
@@ -1029,6 +1183,7 @@ class TableWidget(QWidget):
                     return
                 
         print('num list points is: ', self.var['numlistpoints'])
+        print('nod cycles ', self.var['nodcycles'])
 
         if self.var['nodpattern'] in ['ABA','AABAA']:
             nodmultiplier = math.ceil(self.var['numlistpoints'] / self.var['nodcycles'])
@@ -1038,6 +1193,8 @@ class TableWidget(QWidget):
             nodmultiplier = 2 * self.var['nodcycles']
         if int(self.var['nodcycles']) == 0:
             nodmultiplier = 1
+            
+        print('nodmultiplier ', nodmultiplier)
 
         # Determine C_TIP based on Chopper Symmetry
         if self.var['symmetry'] == 'Symmetric':
@@ -1057,8 +1214,8 @@ class TableWidget(QWidget):
         else:  # 'AB', 'ABBA', and 'A'
             rawtime_ms = npts * scantime_ms * nodmultiplier
         rawtime_sec = rawtime_ms / 1000.
+        
         # update GUI
-        print('numlistpts ', npts, ' nodmult ', nodmultiplier)
         print('integration time ', rawtime_sec)
         self.rawIntTime.setText(str("%.1f" % rawtime_sec))
 
@@ -1587,26 +1744,33 @@ class TableWidget(QWidget):
 
         # sanity check - if entry boxes are empty, return
         try:
-            t_int_source = int(self.onSourceTimeChop.text())
+            self.var['nodcycles'] = int(self.nodcyclesPerMapPosition.text())
             n_grating_pos = int(self.noGratPosChop.text())
             n_map_pts = int(self.totMapPositions.text())
-            self.var['nodcycles'] = int(self.nodcyclesPerMapPosition.text())
+            t_int_source = int(self.onSourceTimeChop.text())
         except ValueError:
             message = 'Please enter non-zero values for on-source time and number of grating positions.'
             QMessageBox.about(self, "Grating", message)
             return
+        
+        print('nodcycles in grating_xls are ', self.var['nodcycles'])
 
         # check for zero values
-        if float(t_int_source) == 0. or float(n_grating_pos) == 0.:
-            print('ERROR: Please enter ' +
-            'non-zero values for On-source time and # of gratin positions.\n')
+        if (float(t_int_source) == 0.) or (float(n_grating_pos) == 0.):
+            message = 'Please enter non-zero values for on-source time and number of grating positions.'
+            QMessageBox.about(self, "Grating", message)
+            #print('ERROR: Please enter ' +
+            #'non-zero values for On-source time and # of gratin positions.\n')
             return
         
         # for Bright Object mode, check that n is even
         if self.var['nodpattern'] in ['ABA', 'AABAA']:
             if (self.var['nodcycles'] % 2) != 0:
-                print('ERROR: Selected Nod Pattern is Bright Object mode. ' +
-                ' Number of A positions per B (n) must be an even number.\n')
+                message = 'ERROR: Selected Nod Pattern is Bright Object mode. '
+                message += ' Number of A positions per B (n) must be an even number.\n'
+                QMessageBox.about(self, "Grating", message)
+                #print('ERROR: Selected Nod Pattern is Bright Object mode. ' +
+                #' Number of A positions per B (n) must be an even number.\n')
                 return
 
         # exposure time needed due to attain t_int_source, seconds
@@ -1632,12 +1796,12 @@ class TableWidget(QWidget):
             # nod interval, seconds
             t_nod_interval = t_int_source * 2
             # time spent in one grating position, seconds
-            t_grating_pos = (t_int_chopped / (n_grating_pos)) + self.t_grating_move
+            t_grating_pos = t_int_chopped / n_grating_pos + self.t_grating_move
             # total time to complete map, minutes
             t_map = (self.var['nodcycles'] + 1) *  \
                 (t_int_source*2 + self.t_ta_move) * n_map_pts / self.var['nodcycles'] / 60.
             # update GUI
-            self.nodCycles.setText('')
+            self.nodCycles.setText("{0:d}".format(self.var['nodcycles']))
             self.noGratPos4Nod.setText('')
             self.gratCycle4Nod.setText('')
         else: # (AB)*n and (ABBA)*(n/2) modes
@@ -1646,7 +1810,7 @@ class TableWidget(QWidget):
             #n_nod_cycles = int( t_grating_sweep / t_nod_interval)   # CHECK is this the same ???
             n_nod_cycles = mround(math.ceil (t_grating_sweep * 2 / t_nod_interval), 2) / 2
             # number of grating positions on one nod
-            n_grating_pos_per_nod = n_grating_pos / n_nod_cycles
+            n_grating_pos_per_nod = n_grating_pos // n_nod_cycles
             # it should be at least one ?
             #if n_grating_pos_per_nod < 1:
             #    n_grating_pos_per_nod = 1
@@ -1660,7 +1824,7 @@ class TableWidget(QWidget):
             t_map = t_total * n_map_pts / 60.
 
             # update GUI
-            self.nodCycles.setText("{0:.1f}".format(round(n_nod_cycles)))
+            self.nodCycles.setText("{0:d}".format(round(n_nod_cycles)))
             self.noGratPos4Nod.setText("{0:.1f}".format(n_grating_pos_per_nod))
             self.gratCycle4Nod.setText("{0:.1f}".format(t_nod_grating))
         # Common updates
@@ -1672,6 +1836,8 @@ class TableWidget(QWidget):
         self.redCC4ChopPos.setText("{0:.0f}".format(round(n_cc_per_grating_pos,0)))
         
         # Automatic build
+        print('path file before buildObs is: ', self.pathFile)
+        print('nodcycles before buidlObs are: ', self.var['nodcycles'])
         self.buildObs()
         
     def selectSctdir(self):
@@ -1940,7 +2106,7 @@ class TableWidget(QWidget):
         s.scn['target_name'] = self.var['target_name']
         s.scn['aorid'] = self.var['aorid']
         s.scn['propid'] = self.var['propid']
-        s.scn['piname'] = self.var['piname']
+        s.scn['observer'] = self.var['observer']
         s.scn['filegp_r'] = self.var['filegp_r']
         s.scn['filegp_b'] = self.var['filegp_b']
         s.scn['obstype'] = self.var['obstype']
@@ -2109,7 +2275,7 @@ class ScanDescription(QObject):
         self.scn = {
             'aorid': 'NONE',    # aor_id
             'propid': 'NONE',   # Proposal ID
-            'piname': 'NONE', # Principal investigator name
+            'observer': 'NONE', # Principal investigator name
             'filegp_r': 'NONE',
             'filegp_b': 'NONE',
             'obstype': 'NONE',
@@ -2380,7 +2546,7 @@ class ScanDescription(QObject):
         file.write('%s%s%s' % ("PROP_ID".ljust(12),  # adjust ljust param
             ('"' + self.scn["propid"] + '"').ljust(20), '# from DCS\n'))
         file.write('%s%s%s' % ("PI_NAME".ljust(12),  # adjust ljust param
-            ('"' + self.scn["piname"] + '"').ljust(20), '# from DCS\n'))
+            ('"' + self.scn["observer"] + '"').ljust(20), '# from DCS\n'))
         file.write('%s%s%s' % ("FILEGP_R".ljust(12),
             ('"' + self.scn["filegp_r"] + '"').ljust(20),
             '# file group id RED for DPS use\n'))

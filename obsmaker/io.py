@@ -4,7 +4,7 @@ import math
 import json
 import numpy as np
 from PyQt5.QtWidgets import (QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
-                             QLabel, QLineEdit, QFormLayout, QFileDialog)
+                             QLabel, QLineEdit, QFormLayout, QFileDialog, QSizePolicy)
 from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from PyQt5.QtCore import Qt
 
@@ -25,9 +25,11 @@ def addComboBox(text, items, layout=None):
         layout.addRow(a.label, a)
     return a
         
-def createEditableBox(text, size, label='', layout=None, validator=None):
+def createEditableBox(text, size=100, label='', layout=None, validator=None):
     box = QLineEdit(text)
-    box.resize(size,40)
+    box.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+    box.setMinimumWidth(size)
+    #box.resize(size,40)
     if layout is not None:
         box.label = QLabel(label)
         layout.addRow(box.label, box)
@@ -350,10 +352,29 @@ def writeFAOR(aor, PropID, PIname, outdir):
         values['ORDER'] = '2'
         #blue_um_per_pix = poly(blue_lam, config['blue2_coef'])
         blue_um_per_pix = np.polyval(np.flip(config['blue2_coef']), blue_lam)
+        #blue_um_per_pix = np.polyval(config['blue2_coef'], blue_lam)
     else:
         values['ORDER'] = '1'
         blue_um_per_pix = np.polyval(np.flip(config['blue1_coef']), blue_lam)
+        #blue_um_per_pix = np.polyval(config['blue1_coef'], blue_lam)
     red_um_per_pix = np.polyval(np.flip(config['red_coef']), red_lam)
+    print('Blue pixel at wav: ', blue_lam, ' has ', blue_um_per_pix, ' um per pixel')
+   
+    from obsmaker.grating import  wavelength2inductosyn, inductosyn2wavelength
+    dichroic = int(values['DICHROIC'])
+    gratpos = wavelength2inductosyn(blue_lam, dichroic, 'BLUE', values['ORDER'], obsdate='')
+    result, result_dwdp = inductosyn2wavelength(gratpos=gratpos, order=values['ORDER'], array='BLUE',
+                   dichroic=dichroic, obsdate='')
+    print('Blue gratpos ', gratpos,' dw ', np.mean(result_dwdp, axis=(1,2)))
+    blue_um_per_pix = np.mean(result_dwdp, axis=(1,2))
+
+    print('Red pixel at wav: ', red_lam, ' has ', red_um_per_pix, ' um per pixel')
+    gratpos = wavelength2inductosyn(blue_lam, dichroic, 'RED', values['ORDER'], obsdate='')
+    result, result_dwdp = inductosyn2wavelength(gratpos=gratpos, order=values['ORDER'], array='RED',
+                   dichroic=dichroic, obsdate='')
+    print('Red gratpos ', gratpos,' dw ', np.mean(result_dwdp, axis=(1,2)))
+    red_um_per_pix = np.mean(result_dwdp, axis=(1,2))
+    
     values['BLUE_FILTER'] = values['ORDER']
 
     nodcycles = int((aor['Repeat'])[0])
@@ -405,6 +426,7 @@ def writeFAOR(aor, PropID, PIname, outdir):
     #     values['SPLITS'] = math.ceil(min(
     #         [blue_pix_per_nod, red_pix_per_nod]) / max_grmov_per_scn_inPix)
 
+    values['TIME_POINT'] = float((aor['TimePerPoint'])[0])
     chopCycles_per_nod = 2. * float((aor['TimePerPoint'])[0])
     values['BLUE_CHOPCYC'] = int(math.ceil(chopCycles_per_nod * nodcycles / \
                               (values['BLUE_POSUP'] * values['SPLITS'])))
@@ -430,7 +452,7 @@ def writeFAOR(aor, PropID, PIname, outdir):
             '_' + replaceBadChar(aor['title'][0]) + '_%03d_map.txt' % i
     # Add extra keywords
     values['PROPID'] = PropID
-    values['PINAME'] = PIname
+    values['OBSERVER'] = PIname
 
     #write contents
     outfile = open(fn, 'w')

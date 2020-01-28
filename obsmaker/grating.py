@@ -58,7 +58,12 @@ def inductosyn2wavelength(gratpos, dichroic, array, order, obsdate=''):
     QS = w1.iloc[7][co]
     ISOFF = w1.iloc[8:][co].values
 
-    ng = len(gratpos)
+    order = int(order)
+    try:
+        ng = len(gratpos)
+    except:
+        ng = 1
+        gratpos = [gratpos]
     pix = np.arange(16) + 1.
     result = np.zeros((ng, 25, 16))
     result_dwdp = np.zeros((ng, 25, 16))
