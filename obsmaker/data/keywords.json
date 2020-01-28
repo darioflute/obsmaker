@@ -127,7 +127,8 @@
     "BLUE_ZBIAS",
     "BLUE_BIASR",
     "PROPID",
-    "PINAME"
+    "OBSERVER",
+    "TIME_POINT"
 ],
 
 "MAPCOORD_SYSTEM_default" : "J2000",
