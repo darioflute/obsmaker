@@ -151,7 +151,7 @@ class TableWidget(QWidget):
         self.chopLengthSamples = createEditableBox('64', 70, 'Chop samples per position ', c3, 'double')
         self.trackingInB = addComboBox('Tracking in pos B: ', ['On', 'Off'], c3) 
         c3.addRow(QLabel('Input params per mapping position'),None)
-        self.onSourceTimeChop = createEditableBox('', 70, 'On-source time: ', c3, 'double')
+        self.onSourceTimeChop = createEditableBox('', 70, 'On-source time: ', c3, 'int', 15)
         self.noGratPosChop = createEditableBox('', 70, 'No of grating positions:  ', c3, 'int')
         self.totMapPositions = createEditableBox('1', 70, 'Total no of mapping positions: ', c3, 'int')
         self.chopCompute = createButton('Compute')
@@ -1096,14 +1096,14 @@ class TableWidget(QWidget):
         # actual time per grating cycle on source
         red_grtcyctime_src_sam =  (red_grtpostime_src_sam * self.var['red_numgrtpos']) - red_grtsettime_sam
         red_scantime_src_sam = red_grtcyctime_src_sam * self.var['red_grtcyc']
-        blue_grtpostime_src_sam =  chopcyctime_src_sam * self.var['blue_chopcyc']
+        #blue_grtpostime_src_sam =  chopcyctime_src_sam * self.var['blue_chopcyc']
         # time spent by grating settling after a move in samps
-        blue_grtsettime_sam = \
-            (self.var['blue_posup'] - 1 + self.var['blue_posdown'] - 1) *  (0.25 / obs_con_samplesize)
+        #blue_grtsettime_sam = \
+        #    (self.var['blue_posup'] - 1 + self.var['blue_posdown'] - 1) *  (0.25 / obs_con_samplesize)
         # actual time per grating cycle on source
-        blue_grtcyctime_src_sam =  \
-            (blue_grtpostime_src_sam * self.var['blue_numgrtpos']) - blue_grtsettime_sam
-        blue_scantime_src_sam =  blue_grtcyctime_src_sam * self.var['blue_grtcyc']
+        #blue_grtcyctime_src_sam =  \
+        #    (blue_grtpostime_src_sam * self.var['blue_numgrtpos']) - blue_grtsettime_sam
+        #blue_scantime_src_sam =  blue_grtcyctime_src_sam * self.var['blue_grtcyc']
         
         # Loops to sort out special cases where we are distributing steps over nod nycles; 
         # also special case where only one channel does this if distributing scans, use the steps per nod cycle
@@ -1112,35 +1112,35 @@ class TableWidget(QWidget):
             nodCycles = self.var['nodcycles']
             if self.var['scandist'] == 'Up':
                 rUp = self.var['red_posup']
-                bUp = self.var['blue_posup']
+                #bUp = self.var['blue_posup']
                 if rUp <= 1:
                     red_grtsettime_sam = rUp * obs4sample
                 else:
                     red_grtsettime_sam = rUp / nodCycles * obs4sample
-                if bUp <= 1:
-                    blue_grtsettime_sam = bUp * obs4sample
-                else:
-                    blue_grtsettime_sam = bUp / nodCycles * obs4sample
+                #if bUp <= 1:
+                #    blue_grtsettime_sam = bUp * obs4sample
+                #else:
+                #    blue_grtsettime_sam = bUp / nodCycles * obs4sample
                 red_grtcyctime_src_sam = red_grtpostime_src_sam *  rUp / nodCycles - red_grtsettime_sam
                 red_scantime_src_sam =  red_grtcyctime_src_sam * self.var['red_grtcyc']
-                blue_grtcyctime_src_sam = blue_grtpostime_src_sam * bUp / nodCycles -  blue_grtsettime_sam
-                blue_scantime_src_sam =  blue_grtcyctime_src_sam * self.var['blue_grtcyc']
+                #blue_grtcyctime_src_sam = blue_grtpostime_src_sam * bUp / nodCycles -  blue_grtsettime_sam
+                #blue_scantime_src_sam =  blue_grtcyctime_src_sam * self.var['blue_grtcyc']
             elif self.var['scandist'] == 'Down':
                 rDo = self.var['red_posdown']
-                bDo = self.var['blue_posdown']
-                blue_grtsettime_sam = bDo / nodCycles * obs4sample
+                #bDo = self.var['blue_posdown']
+                #blue_grtsettime_sam = bDo / nodCycles * obs4sample
                 if rDo <= 1:
                     red_grtsettime_sam = rDo * obs4sample
                 else:
                     red_grtsettime_sam = rDo / nodCycles * obs4sample
-                if bDo <= 1:
-                    blue_grtsettime_sam = bDo * obs4sample
-                else:
-                    blue_grtsettime_sam = bDo / nodCycles * obs4sample
+                #if bDo <= 1:
+                #    blue_grtsettime_sam = bDo * obs4sample
+                #else:
+                #    blue_grtsettime_sam = bDo / nodCycles * obs4sample
                 red_grtcyctime_src_sam = red_grtpostime_src_sam * rDo / nodCycles - red_grtsettime_sam
                 red_scantime_src_sam =  red_grtcyctime_src_sam * self.var['red_grtcyc']
-                blue_grtcyctime_src_sam = blue_grtpostime_src_sam * bDo / nodCycles -  blue_grtsettime_sam
-                blue_scantime_src_sam = blue_grtcyctime_src_sam * self.var['blue_grtcyc']
+                #blue_grtcyctime_src_sam = blue_grtpostime_src_sam * bDo / nodCycles -  blue_grtsettime_sam
+                #blue_scantime_src_sam = blue_grtcyctime_src_sam * self.var['blue_grtcyc']
 
         #chop_freq = float(1.0 / (self.var['chop_length'] / obs_con_samplesize)) / 2.
         chop_freq = obs_con_samplesize / self.var['chop_length'] * 0.5
@@ -1753,6 +1753,10 @@ class TableWidget(QWidget):
             QMessageBox.about(self, "Grating", message)
             return
         
+        
+        print('n_grating_pos ', n_grating_pos)
+        print('t_int_source ', t_int_source)
+        
         print('nodcycles in grating_xls are ', self.var['nodcycles'])
 
         # check for zero values
@@ -1774,19 +1778,25 @@ class TableWidget(QWidget):
                 return
 
         # exposure time needed due to attain t_int_source, seconds
+        print('obs_eff ', self.obs_eff)
         t_int_chopped = t_int_source / self.obs_eff
         # time spent in one grating position, seconds
         # for Asymmetric chops
+        print('symmetry ', self.var['symmetry'])
         if self.var['symmetry'] == 'Asymmetric': #self.var['obsmode'] != 'Beam switching':
             t_grating_pos = (t_int_chopped / (n_grating_pos)) + self.t_grating_move
         # for Symmetric chops
         else:
             t_grating_pos = (t_int_chopped / (2 * n_grating_pos)) + self.t_grating_move
+            
+        print('t_grating_move ', self.t_grating_move)
+        print('t_grating_pos ', t_grating_pos)
 
         # above time needs to be a rounded up to nearest integer, seconds
         t_grating_pos_use = t_grating_pos
         # time it takes to complete all grating steps
         t_grating_sweep = t_grating_pos_use * n_grating_pos
+        print('t_grating_sweep ', t_grating_sweep)
         # number of chop cycles during one grating position
         n_cc_per_grating_pos = t_grating_pos_use * self.f_chop
 
@@ -1806,6 +1816,13 @@ class TableWidget(QWidget):
             self.gratCycle4Nod.setText('')
         else: # (AB)*n and (ABBA)*(n/2) modes
             t_nod_interval = 30.    # nod interval, seconds
+            print('t_grating_sweep ', t_grating_sweep)
+            if t_grating_sweep <= 15:
+                message = 'On-source time has to be longer than 15s.\n Fixing on-source time to 16s'
+                QMessageBox.about(self, "Onsource time", message) 
+                self.onSourceTimeChop.setText('16')
+                return
+                
             # number of nod cycles needed to complete all grating positions
             #n_nod_cycles = int( t_grating_sweep / t_nod_interval)   # CHECK is this the same ???
             n_nod_cycles = mround(math.ceil (t_grating_sweep * 2 / t_nod_interval), 2) / 2

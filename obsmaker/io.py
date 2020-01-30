@@ -25,19 +25,23 @@ def addComboBox(text, items, layout=None):
         layout.addRow(a.label, a)
     return a
         
-def createEditableBox(text, size=100, label='', layout=None, validator=None):
+def createEditableBox(text, size=100, label='', layout=None, validator=None, bottom=None, top=None):
     box = QLineEdit(text)
     box.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
     box.setMinimumWidth(size)
-    #box.resize(size,40)
     if layout is not None:
         box.label = QLabel(label)
         layout.addRow(box.label, box)
     if validator is not None:
         if validator == 'int':
-            box.setValidator(QIntValidator())
+            qvalidator = QIntValidator()
         elif validator == 'double':
-            box.setValidator(QDoubleValidator())
+            qvalidator = QDoubleValidator()
+        if bottom is not None:
+            qvalidator.setBottom(bottom)
+        if top is not None:
+            qvalidator.setTop(top)
+        box.setValidator(qvalidator)
     return box
         
 def createWidget(direction, layout=None):
