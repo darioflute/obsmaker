@@ -159,7 +159,7 @@ class TableWidget(QWidget):
         self.chopCompute.clicked.connect(self.grating_xls)
         c3.addRow(self.chopCompute, None)
         self.nodCycles = createEditableBox('', 70, 'No of nod cycles: ', c3)
-        self.ccPerGratPos = createEditableBox('', 70, 'No of CC per grating pos: ', c3)
+        self.ccPerGratPos = createEditableBox('', 70, 'Chop cycles per grating pos: ', c3)
         self.loadScanDescriptionFile= createButton('Load file')
         self.noGratPos4Nod = createEditableBox('', 70, 'No of grating pos per nod: ', c3)
         self.gratCycle4Nod = createEditableBox('', 70, 'Grating cycle per nod (30.0): ', c3)
