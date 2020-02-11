@@ -83,7 +83,7 @@ class TableWidget(QWidget):
         self.sourceType = addComboBox('Source type: ', self.sourcetypes, c1 )
         self.aorID = createEditableBox('None', 100, 'AOR ID: ', c1)
         self.propID = createEditableBox('None', 100, 'PROP ID: ', c1)
-        self.piName = createEditableBox('None', 150, 'PI name: ', c1)
+        self.piName = createEditableBox('FIFI-LS TEAM', 150, 'PI name: ', c1)
         self.piName.textEdited.connect(self.piNameUpdated)
         self.targetName = createEditableBox('None', 120, 'Target name: ', c1)
         self.targetRA = createEditableBox('00 00 00.0', 120, 'Target RA: ', c1)
@@ -809,6 +809,9 @@ class TableWidget(QWidget):
         """Update with values from *.sct file."""
         
         self.setDichroic.currentIndexChanged.disconnect()
+        self.timePerPoint = 0.
+        self.piName.setText('FIFI-LS TEAM')
+        
         for key in aorPars.keys():
             label = self.k2tw[key]
             if isinstance(label, QLineEdit):
@@ -820,7 +823,7 @@ class TableWidget(QWidget):
                     else:
                         label.setText(aorPars[key])
                 except:
-                    print(key + 'is unkown.')
+                        print(key + 'is unkown.')
             elif isinstance(label, QComboBox):
                 try:
                     index = label.findText(aorPars[key], Qt.MatchFixedString)
@@ -834,6 +837,9 @@ class TableWidget(QWidget):
                     # self.k2tw[key] = maplistpath # does not work ...
                     self.mapListPath = aorPars[key]
                     #print('Map file is in: ', maplistpath)
+                elif key == 'TIME_POINT':
+                    print('time per point is: ', aorPars[key])
+                    self.timePerPoint = aorPars[key]
                 else:
                     print('Unknown key ',key)
 
@@ -846,7 +852,8 @@ class TableWidget(QWidget):
         gratposchop = np.max([redgratposchop, bluegratposchop])
         self.noGratPosChop.setText('{0:0d}'.format(gratposchop))
         # Update on-source time (TimePerPoint * Repeat * NumPtsDec * NumPtsRa)
-        timechop = int(np.rint(float(aorPars['TIME_POINT']))) * int(aorPars['NODCYCLES'])
+        #timechop = int(np.rint(float(aorPars['TIME_POINT']))) * int(aorPars['NODCYCLES'])
+        timechop = int(np.rint(float(self.timePerPoint))) * int(aorPars['NODCYCLES'])
         self.onSourceTimeChop.setText('{0:0d}'.format(timechop))
         # Update number of points in map
         self.totMapPositions.setText(aorPars['DITHMAP_NUMPOINTS'])
@@ -2292,7 +2299,7 @@ class ScanDescription(QObject):
         self.scn = {
             'aorid': 'NONE',    # aor_id
             'propid': 'NONE',   # Proposal ID
-            'observer': 'NONE', # Principal investigator name
+            'observer': 'FIFI-LS TEAM', # Principal investigator name
             'filegp_r': 'NONE',
             'filegp_b': 'NONE',
             'obstype': 'NONE',
