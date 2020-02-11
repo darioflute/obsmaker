@@ -2567,10 +2567,11 @@ class ScanDescription(QObject):
         file.write('#    ASTRONOMY\n')
         file.write('%s%s%s' % ("AOR_ID".ljust(12),  # adjust ljust param
             ('"' + self.scn["aorid"] + '"').ljust(20), '# from DCS\n'))
-        file.write('%s%s%s' % ("PROP_ID".ljust(12),  # adjust ljust param
-            ('"' + self.scn["propid"] + '"').ljust(20), '# from DCS\n'))
-        file.write('%s%s%s' % ("PI_NAME".ljust(12),  # adjust ljust param
-            ('"' + self.scn["observer"] + '"').ljust(20), '# from DCS\n'))
+        # POSSIBLE NEW KEYWORDS
+        #file.write('%s%s%s' % ("PROP_ID".ljust(12),  # adjust ljust param
+        #    ('"' + self.scn["propid"] + '"').ljust(20), '# from DCS\n'))
+        #file.write('%s%s%s' % ("OBSERVER".ljust(12),  # adjust ljust param
+        #    ('"' + self.scn["observer"] + '"').ljust(20), '# from DCS\n'))
         file.write('%s%s%s' % ("FILEGP_R".ljust(12),
             ('"' + self.scn["filegp_r"] + '"').ljust(20),
             '# file group id RED for DPS use\n'))
