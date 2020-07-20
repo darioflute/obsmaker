@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QFileDialog, QWidget, 
+from PyQt5.QtWidgets import (QMainWindow, QApplication, QFileDialog, QWidget,
                              QHBoxLayout)
 #from PyQt5.QtCore import Qt
 from obsmaker.dialog import TableWidget
@@ -7,22 +7,24 @@ import xml.etree.ElementTree as ET
 import sys
 import os
 
+from obsmaker import __version__
+
 class GUI(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.title = 'Observation maker for FIFI-LS'
-        self.left = 0
-        self.top = 0
-        self.width = 300
-        self.height = 200
+        self.title = 'Observation maker for FIFI-LS: version ' + __version__
+        # self.left = 0
+        # self.top = 0
+        # self.width = 300
+        # self.height = 200
         self.setWindowTitle(self.title)
-        self.setGeometry(self.left, self.top, self.width, self.height)
+        # self.setGeometry(self.left, self.top, self.width, self.height)
         # Define main widget
         wid = QWidget()
         self.setCentralWidget(wid)
         mainLayout = QHBoxLayout(wid)
-        
+
         # Add dialog to main layout
         self.TW = TableWidget(self)
         mainLayout.addWidget(self.TW)
@@ -31,20 +33,20 @@ class GUI(QMainWindow):
         #self.TWdictionary()
         self.defineActions()
         self.show()
-        
+
     def defineActions(self):
         self.TW.translateAOR.clicked.connect(self.translateAOR)
         self.TW.loadTemplate.clicked.connect(self.loadTemplate)
         self.TW.loadMapPatternFile.clicked.connect(self.loadMapFile)
         self.TW.exit.clicked.connect(self.exitObsmaker)
-        
+
     def translateAOR(self):
         """
         Read *aor created with USPOT, split it into multiple parts and save it in *.sct files.
         """
-        fd = QFileDialog()
+        fd = QFileDialog(None, "Load and translate AOR")
         fd.setLabelText(QFileDialog.Accept, "Import")
-        fd.setNameFilters(["Fits Files (*.aor)", "All Files (*)"])
+        fd.setNameFilters(["AOR Files (*.aor)", "All Files (*)"])
         fd.setOptions(QFileDialog.DontUseNativeDialog)
         fd.setViewMode(QFileDialog.List)
         fd.setFileMode(QFileDialog.ExistingFile)
@@ -52,11 +54,12 @@ class GUI(QMainWindow):
             fileName= fd.selectedFiles()
             aorfile = fileName[0]
             print('Reading file ', aorfile)
+            self.TW.update_status("translateAOR: Reading file " + aorfile + "\n")
             errmsg = ''
             # Save the file path for future reference
             self.pathFile, file = os.path.split(aorfile)
             # Define path of AOR file in the TW class
-            self.TW.pathFile = self.pathFile 
+            self.TW.pathFile = self.pathFile
             tree = ET.ElementTree(file=aorfile)  # or tree = ET.parse(aorfile)
             vector = tree.find('list/vector')
             # Extract Target and Instrument from each AOR
@@ -96,15 +99,17 @@ class GUI(QMainWindow):
                         # FIFI-LS wants sct and map files to be in the same directory
                         # as the input aorfile, so set that as outdir
                         print('write translated AOR')
-                        errmsg += writeFAOR(obs, PropID, PIname, os.path.dirname(os.path.abspath(aorfile)))
-            return errmsg
-        
+                        errmsg += writeFAOR(obs, PropID, PIname,
+                            os.path.dirname(os.path.abspath(aorfile)))
+                        self.TW.update_status(errmsg)
+            # return errmsg
+
     def loadTemplate(self):
         """Load a sct file."""
-        fd = QFileDialog()
+        fd = QFileDialog(None, "Load Scan Template")
         fd.setLabelText(QFileDialog.Accept, "Import")
         fd.setDirectory(self.sctpath)
-        fd.setNameFilters(["Fits Files (*.sct)", "All Files (*)"])
+        fd.setNameFilters(["Scan Template (*.sct)", "All Files (*)"])
         fd.setOptions(QFileDialog.DontUseNativeDialog)
         fd.setViewMode(QFileDialog.List)
         fd.setFileMode(QFileDialog.ExistingFile)
@@ -116,8 +121,10 @@ class GUI(QMainWindow):
             # Default settings
             self.TW.setDefaults()
             # Load template and update table widget
+            self.TW.update_status('Loading ' + sctfile + "\n")
             self.TW.sctfile = sctfile
             self.aorParameters = readSct(sctfile)
+            # self.TW.update_status(errmsg)
             self.TW.update(self.aorParameters)
             self.sctpath = os.path.dirname(os.path.abspath(sctfile))
             # self.TW.sctdir.setText(sctpath) Initiliaze with path of read file
@@ -126,6 +133,7 @@ class GUI(QMainWindow):
             self.TW.mapListPath = os.path.join(self.sctpath, mapfile)
             mapfile = self.TW.mapListPath
             print('mapfile ', mapfile)
+            self.TW.update_status("mapfile: " + mapfile + "\n")
             if len(mapfile) > 0:
                 try:
                     noMapPoints, mapListPath = readMap(mapfile)
@@ -133,12 +141,13 @@ class GUI(QMainWindow):
                     self.TW.mapListPath = mapListPath
                     self.TW.noMapPoints.setText(str(noMapPoints))
                     print('map loaded')
+                    # self.TW.update_status("Map loaded. \n")
                 except:
                     print('Invalid map file.')
             # First build
             print('First build ')
             self.TW.buildObs()
-                    
+
     def loadMapFile(self):
         """Load a map file."""
         #fd = QFileDialog()
@@ -155,20 +164,20 @@ class GUI(QMainWindow):
         #        self.TW.mapListPath = mapListPath
         #        self.TW.noMapPoints.setText(str(noMapPoints))
         #    except:
-        #        print('Invalid map file.')  
+        #        print('Invalid map file.')
         try:
             noMapPoints, mapListPath = readMap()
             self.TW.mapListPath = mapListPath
             self.TW.noMapPoints.setText(str(noMapPoints))
         except:
-            print('Invalid map file.')  
-        
-        
+            print('Invalid map file.')
+
+
 
     def exitObsmaker(self):
         self.close()
-            
-        
+
+
 def main():
     from obsmaker import __version__
     print('Obsmaker version ', __version__)
@@ -179,6 +188,8 @@ def main():
     # Adjust geometry to size of the screen
     screen_resolution = app.desktop().screenGeometry()
     width = screen_resolution.width()
-    gui.setGeometry(width*0.1, 0, width*0.5, width*0.2)
+    height = screen_resolution.height()
+    # gui.setGeometry(width*0.01, 0, width*0.5, width*0.2)
+    gui.setGeometry(width*0.01, 0, width*0.96, height*0.92)
 
     sys.exit(app.exec_())

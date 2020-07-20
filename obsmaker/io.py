@@ -16,7 +16,7 @@ def add2widgets(text, widget1, widget2, layout):
     box.layout.addWidget(widget1)
     box.layout.addWidget(widget2)
     layout.addRow(QLabel(text), box)
-        
+
 def addComboBox(text, items, layout=None):
     a = QComboBox()
     a.addItems(items)
@@ -24,7 +24,7 @@ def addComboBox(text, items, layout=None):
         a.label = QLabel(text)
         layout.addRow(a.label, a)
     return a
-        
+
 def createEditableBox(text, size=100, label='', layout=None, validator=None, bottom=None, top=None):
     box = QLineEdit(text)
     box.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
@@ -43,7 +43,7 @@ def createEditableBox(text, size=100, label='', layout=None, validator=None, bot
             qvalidator.setTop(top)
         box.setValidator(qvalidator)
     return box
-        
+
 def createWidget(direction, layout=None):
     a = QWidget()
     if direction == 'H':
@@ -57,13 +57,13 @@ def createWidget(direction, layout=None):
     if layout is not None:
         layout.addWidget(a)
     return a
-    
+
 def createButton(action, layout=None):
     a = QPushButton(action)
     if layout is not None:
         layout.addWidget(a)
     return a
-    
+
 def addLabel(text, layout=None):
     label = QLabel()
     label.setText(text)
@@ -92,7 +92,7 @@ def velocity2z(v):
     '''
     c = 299792.458 # km/s
     return v/c
-    
+
 def radec(xra, xdec):
     '''
     radec.pro (IDL astrolib) translated to Python
@@ -130,7 +130,7 @@ def readAOR(vector):
         config = json.load(f)
     tagnames = config['tagnames']
     aor = dict.fromkeys(tagnames)
-    
+
     #print aor
     for tag in tagnames:
         nodes = vector.findall('.//' + tag)   # returns a list of objects
@@ -161,7 +161,7 @@ def writeFAOR(aor, PropID, PIname, outdir):
     keywords = config['keywords']
     tagnames = config['tagnames']
     values=dict.fromkeys(keywords)
-    
+
     # set default values
     values['MAPCOORD_SYSTEM'] = config['MAPCOORD_SYSTEM_default']  # 'J2000'
     values['PATTERN'] = config['PATTERN_default']  # 'File'
@@ -174,7 +174,7 @@ def writeFAOR(aor, PropID, PIname, outdir):
     values['CHOP_LENGTH'] = config['CHOP_LENGTH_default']  # 64
 
     values['OBSTYPE'] = config['OBSTYPE_default']  # 'OBJECT'
-    values['NODPATTERN'] = config['NODPATTERN_default']  # 'ABBA'
+    # values['NODPATTERN'] = config['NODPATTERN_default']  # 'ABBA'
     values['REWIND'] = config['REWIND_default']  # 'Auto'
     values['OFFPOS_REDUC'] = config['OFFPOS_REDUC_default']  # 1.
 
@@ -210,23 +210,15 @@ def writeFAOR(aor, PropID, PIname, outdir):
         # aor['equatorial'][0]  # should be set to 'true'
         # aor['galactic'][0]  # should be set to 'false'
 
-    # pprint(aor)
-    # if there are None values in aor, exit immediately
-    empty_values = [tag for tag in tagnames if aor[tag] is None]
-    if len(empty_values) > 0:
-        tag_list = ''
-        for item in empty_values:
-            tag_list += item + ' '
+    # from pprint import pprint ; pprint(aor)
 
-        errmsg += tag_list + 'value was not set in the .aor file.\n'
-        errmsg += 'Please validate ' + aor['aorID'][0] + ' in SSpot.\n'
-        return errmsg
-
-    values['TARGET_NAME'] = (aor['name'])[0].replace(" ", "_")
-    values['AORID'] = (aor['aorID'])[0].replace(" ", "_")
-    values['OBSID'] = values['TARGET_NAME'].replace('@', '') + '_' + replaceBadChar(aor['title'][0])
-    values['SRCTYPE'] = (aor['SourceType'])[0].upper()
-    values['INSTMODE'] = (aor['ObsPlanMode'])[0]
+    values['TARGET_NAME'] = aor['name'][0].replace(" ", "_")
+    if aor['naifID'][0] != "": values['NAIFID'] = aor['naifID'][0]
+    values['AORID'] = aor['aorID'][0].replace(" ", "_")
+    values['OBSID'] = values['TARGET_NAME'].replace('@', '') + '_' + \
+        replaceBadChar(aor['title'][0])
+    values['SRCTYPE'] = aor['SourceType'][0].upper()
+    values['INSTMODE'] = aor['ObsPlanMode'][0]
 
     if aor['equinoxDesc'][0] != 'J2000':
         # print 'Not J2000 Coordinates'
@@ -236,12 +228,21 @@ def writeFAOR(aor, PropID, PIname, outdir):
     # convert ra, dec in decimal degrees to hh mm ss, dd mm ss
     ihr, imin, xsec, ideg, imn, xsc = radec(ra, dec)
     sra =  str(ihr) + ' ' + str(imin) + ' ' + str(round(xsec, 2))
-    sdec = '+' * (ideg >= 0) + str(ideg) + ' ' + str(imn) + ' ' + str(round(xsc, 1))
+    sdec = '+' * (ideg >= 0) + str(ideg) + ' ' + str(imn) + ' ' + \
+        str(round(xsc, 1))
     values['TARGET_LAMBDA'] = sra
     values['TARGET_BETA'] = sdec
 
-    detang = ((float((aor['MapRotationAngle'])[0]) + 180 + 360) % 360) - 180
-    values['DETANGLE'] = detang    # in degrees
+    values['NODPATTERN'] = aor['NodPattern'][0]   # new in Cycle 9
+    # older cycle ObsPlans downloaded w/ Cycle 9 USpot will have incorrect
+    # NodPattern so fix it here -- will comment out/delete this part later
+    if values['AORID'][0:2] in ['03', '04', '05', '06', '07', '08']:
+        if values['INSTMODE'] == 'SYMMETRIC_CHOP': values['NODPATTERN'] = 'ABBA'
+        if values['INSTMODE'] in ['ASYMMETRIC_CHOP', 'TOTAL_POWER', 'SPECTRAL_SCAN']:
+            values['NODPATTERN'] = 'ABA'
+
+    detang = ((float(aor['MapRotationAngle'][0]) + 180 + 360) % 360) - 180
+    values['DETANGLE'] = detang    # MapRotationAngle in degrees
     # math.radians(x) - convert angle x from degrees to radians
     # math.degrees(x) - convert angle x from radians to degrees
     # rotation matrix - rotate counter-clockwise
@@ -250,26 +251,43 @@ def writeFAOR(aor, PropID, PIname, outdir):
     sina = np.sin(detang)
     r = np.array([[cosa, -sina], [sina, cosa]])
 
-    if type(aor['deltaRaV']) == list:
-        aor['deltaRaV'] = [float(item) for item in aor['deltaRaV']]
-        aor['deltaDecW'] = [float(item) for item in aor['deltaDecW']]
+    if values['INSTMODE'] == 'OTF_MAP':
+        # OTF mode doesn't have these keywords, so give them a value
+        aor['BandwidthBlue'][0], aor['BandwidthRed'][0] = 0., 0.
+        aor['ChopAngle'][0], aor['ChopThrow'][0] = 0., 0.
+        aor['ChopType'][0] = 'None'
+        aor['ChopAngleCoordinate'][0] = 'HORIZON'
+        aor['Repeat'][0] = 1
+        values['NODPATTERN'] = 'AB'
+        values['INSTMODE'] = 'OTF_TP'
+        # scan parameters
+        # print(aor['deltaX'], aor['deltaY'], aor['scanSpeed'], aor['scanDirection'])
+        aor['deltaX'] = [float(item) for item in aor['deltaX']]
+        aor['deltaY'] = [float(item) for item in aor['deltaY']]
+        # aor['scanSpeed'] = [float(item) for item in aor['scanSpeed']]
+        mapoffsets = np.array([aor['deltaX'], aor['deltaY']])
     else:
-        aor['deltaRaV'] = [float(item) for item in [aor['deltaRaV']]]
-        aor['deltaDecW'] = [float(item) for item in [aor['deltaDecW']]]
-    if len(aor['deltaRaV']) == 1:
-        mapoffsets = np.array([aor['deltaRaV']] + [aor['deltaDecW']])
-    else:
-        mapoffsets = np.array([aor['deltaRaV'], aor['deltaDecW']])    #print mapoffsets
+        if type(aor['deltaRaV']) == list:
+            aor['deltaRaV'] = [float(item) for item in aor['deltaRaV']]
+            aor['deltaDecW'] = [float(item) for item in aor['deltaDecW']]
+        else:
+            aor['deltaRaV'] = [float(item) for item in [aor['deltaRaV']]]
+            aor['deltaDecW'] = [float(item) for item in [aor['deltaDecW']]]
+        if len(aor['deltaRaV']) == 1:
+            mapoffsets = np.array([aor['deltaRaV']] + [aor['deltaDecW']])
+        else:
+            mapoffsets = np.array([aor['deltaRaV'], aor['deltaDecW']])
+    # print(mapoffsets)
 
-    rot_mapoffsets = np.transpose(np.dot(np.transpose(r), mapoffsets))
-    if len(aor['deltaRaV']) == 1:
+    # rot_mapoffsets = np.transpose(np.dot(np.transpose(r), mapoffsets))
+    if values['INSTMODE'] != 'OTF_TP' and len(aor['deltaRaV']) == 1:
         values['DITHMAP_NUMPOINTS'] = 1
     else:
-        values['DITHMAP_NUMPOINTS'] = len(rot_mapoffsets)
+        values['DITHMAP_NUMPOINTS'] = len(np.transpose(mapoffsets))
 
-    values['CHOPCOORD_SYSTEM'] = (aor['ChopAngleCoordinate'])[0]
-    values['CHOP_AMP'] = float((aor['ChopThrow'])[0])/2.
-    values['CHOP_POSANG'] = (float((aor['ChopAngle'])[0]) + 270 + 360) % 360
+    values['CHOPCOORD_SYSTEM'] = aor['ChopAngleCoordinate'][0]
+    values['CHOP_AMP'] = float(aor['ChopThrow'][0])/2.
+    values['CHOP_POSANG'] = (float(aor['ChopAngle'][0]) + 270 + 360) % 360
         # CCW from N in SSpot, S of E in ObsMaker
 
     if (values['CHOPCOORD_SYSTEM'] == 'HORZION') and (aor['ChopAngle'] != 0):
@@ -279,14 +297,12 @@ def writeFAOR(aor, PropID, PIname, outdir):
 
     if aor['ChopType'][0] == 'Sym':
         values['TRACKING'] = 'On'
-        #values['OBSMODE'] = 'Beam switching'
         values['OBSMODE'] = 'Symmetric'
         values['OFFPOS'] = 'Matched'
         values['OFFPOS_LAMBDA'] = '0.0'
         values['OFFPOS_BETA'] = '0.0'
-    elif aor['ChopType'][0] == 'Asym':
+    elif aor['ChopType'][0] == 'Asym' or aor['ChopType'][0] == 'None':
         values['TRACKING'] = 'Off'
-        #values['OBSMODE'] = 'Asym chop + off'
         values['OBSMODE'] = 'Asymmetric'
         if aor['ReferenceType'][0] == 'RA_Dec':
             values['OFFPOS_LAMBDA'] = aor['RefRA'][0]
@@ -302,7 +318,7 @@ def writeFAOR(aor, PropID, PIname, outdir):
             values['OFFPOS_LAMBDA'] = aor['RAOffset'][0]
             values['OFFPOS_BETA']   = aor['DecOffset'][0]
             if aor['MapRefPos'][0] == 'true':
-                values['OFFPOS'] = 'Relative to active pos'
+                values['OFFPOS'] = 'Relative to active map pos'
             elif aor['MapRefPos'][0] == 'false':
                 values['OFFPOS'] = 'Relative to target'
 
@@ -311,15 +327,15 @@ def writeFAOR(aor, PropID, PIname, outdir):
     elif aor['PrimeArray'][0] == 'Red':
         values['PRIMARYARRAY'] = 'RED'
 
-    values['DICHROIC'] = ((aor['Dichroic'])[0])[0:3]  # 105 or 130
+    values['DICHROIC'] = aor['Dichroic'][0][0:3]  # 105 or 130
 
     #### updated for Cycle 4
     #  blue rest wavelength and species
-    blue_lam = float((aor['WavelengthBlue'])[0])  # Wavelength in Cycle 3
+    blue_lam = float(aor['WavelengthBlue'][0])  # Wavelength in Cycle 3
     values['BLUE_LINE'] = 'Custom'
     values['BLUE_MICRON'] = blue_lam  # user-entered wavelength
     # red rest wavelength and species
-    red_lam = float((aor['WavelengthRed'])[0])   # Wavelength2 in Cycle 3
+    red_lam = float(aor['WavelengthRed'][0])   # Wavelength2 in Cycle 3
     values['RED_LINE'] = 'Custom'
     values['RED_MICRON'] = red_lam  # user-entered wavelength
 
@@ -330,17 +346,17 @@ def writeFAOR(aor, PropID, PIname, outdir):
     # ObsMaker line offset must be in kms or um
     # convert z to um: offset = obs_um - rest_um = z * um_rest
     if aor['RedshiftUnit'] == 'z':
-        values['BLUE_OFFSET'] = float((aor['Redshift'])[0]) * blue_lam
+        values['BLUE_OFFSET'] = float(aor['Redshift'][0]) * blue_lam
         values['BLUE_OFFSET_TYPE'] = 'um'
-        values['RED_OFFSET'] = float((aor['Redshift'])[0]) * red_lam
+        values['RED_OFFSET'] = float(aor['Redshift'][0]) * red_lam
         values['RED_OFFSET_TYPE'] = 'um'
-        values['REDSHIFT'] = float((aor['Redshift'])[0])
+        values['REDSHIFT'] = float(aor['Redshift'][0])
     else:  # other option is 'kmPerSec' (Cycle4), '' (Cycle5; kmPerSec implied)
-        values['BLUE_OFFSET'] = float((aor['Redshift'])[0])
+        values['BLUE_OFFSET'] = float(aor['Redshift'][0])
         values['BLUE_OFFSET_TYPE'] = 'kms'
-        values['RED_OFFSET'] = float((aor['Redshift'])[0])
+        values['RED_OFFSET'] = float(aor['Redshift'][0])
         values['RED_OFFSET_TYPE'] = 'kms'
-        values['REDSHIFT'] = velocity2z(float((aor['Redshift'])[0]))
+        values['REDSHIFT'] = velocity2z(float(aor['Redshift'][0]))
 
     # File Group IDs for DPS
     # Target_wavelength - SSpot allows 3 significant digits
@@ -363,7 +379,7 @@ def writeFAOR(aor, PropID, PIname, outdir):
         #blue_um_per_pix = np.polyval(config['blue1_coef'], blue_lam)
     red_um_per_pix = np.polyval(np.flip(config['red_coef']), red_lam)
     print('Blue pixel at wav: ', blue_lam, ' has ', blue_um_per_pix, ' um per pixel')
-   
+
     from obsmaker.grating import  wavelength2inductosyn, inductosyn2wavelength
     dichroic = int(values['DICHROIC'])
     gratpos = wavelength2inductosyn(blue_lam, dichroic, 'BLUE', values['ORDER'], obsdate='')
@@ -378,24 +394,24 @@ def writeFAOR(aor, PropID, PIname, outdir):
                    dichroic=dichroic, obsdate='')
     print('Red gratpos ', gratpos,' dw ', np.mean(result_dwdp, axis=(1,2)))
     red_um_per_pix = np.mean(result_dwdp, axis=(1,2))
-    
+
     values['BLUE_FILTER'] = values['ORDER']
 
-    nodcycles = int((aor['Repeat'])[0])
+    nodcycles = int(aor['Repeat'][0])
     values['NODCYCLES'] = nodcycles
 
     # Bandwidths  - updated for Cycle 4
-    # if NodType or ObsPlanMode is SPECTRAL_SCAN, BandwidthBlue/Red is in
+    # if INSTMODE/ObsPlanMode is SPECTRAL_SCAN, BandwidthBlue/Red is in
     # micron; other Modes are in kmPerSec.
-    if aor['NodType'][0] == 'SPECTRAL_SCAN':
-        bandwidthBlue_pix = max([(float((aor['BandwidthBlue'])[0]) /  \
+    if values['INSTMODE'] == 'SPECTRAL_SCAN':
+        bandwidthBlue_pix = max([(float(aor['BandwidthBlue'][0]) /  \
             blue_um_per_pix), 6.])
-        bandwidthRed_pix = max([(float((aor['BandwidthRed'])[0]) /   \
+        bandwidthRed_pix = max([(float(aor['BandwidthRed'][0]) /   \
             red_um_per_pix), 6.])
     else:
-        bandwidthBlue_pix = max([float((aor['BandwidthBlue'])[0]) *  \
+        bandwidthBlue_pix = max([float(aor['BandwidthBlue'][0]) *  \
             blue_lam / (config['speed_of_light']) / blue_um_per_pix, 6.])
-        bandwidthRed_pix = max([float((aor['BandwidthRed'])[0]) *  \
+        bandwidthRed_pix = max([float(aor['BandwidthRed'][0]) *  \
             red_lam / (config['speed_of_light']) / red_um_per_pix, 6.])
 
     blue_pix_per_nod = bandwidthBlue_pix / nodcycles
@@ -430,8 +446,8 @@ def writeFAOR(aor, PropID, PIname, outdir):
     #     values['SPLITS'] = math.ceil(min(
     #         [blue_pix_per_nod, red_pix_per_nod]) / max_grmov_per_scn_inPix)
 
-    values['TIME_POINT'] = float((aor['TimePerPoint'])[0])
-    chopCycles_per_nod = 2. * float((aor['TimePerPoint'])[0])
+    values['TIME_POINT'] = float(aor['TimePerPoint'][0])
+    chopCycles_per_nod = 2. * float(aor['TimePerPoint'][0])
     values['BLUE_CHOPCYC'] = int(math.ceil(chopCycles_per_nod * nodcycles / \
                               (values['BLUE_POSUP'] * values['SPLITS'])))
     values['RED_CHOPCYC'] = int(math.ceil(chopCycles_per_nod * nodcycles / \
@@ -460,7 +476,7 @@ def writeFAOR(aor, PropID, PIname, outdir):
 
     #write contents
     outfile = open(fn, 'w')
-    for item in keywords:
+    for item in values.keys():
         outfile.write("%s#%s\n" %
         (str(values[item]).ljust(max([25, len(str(values[item])) + 2])), item))
     outfile.close()
@@ -471,19 +487,30 @@ def writeFAOR(aor, PropID, PIname, outdir):
     outfile.write("%s%s" % (str(values['TARGET_LAMBDA']).rjust(12),
         str(values['TARGET_BETA']).rjust(12) + "\n"))
 
-    if len(rot_mapoffsets[0]) > 1:
-        for line in rot_mapoffsets:
+    if values['INSTMODE'] == 'OTF_TP':  # do not rotate here; rotate in ObsMaker
+        rot_mapoffsets = np.transpose(mapoffsets)
+        for idx, line in enumerate(rot_mapoffsets):
             rot = str(round(line[0], 4)).rjust(12) + \
                   str(round(line[1], 4)).rjust(
-                    max([12, len(str(round(line[1], 4))) + 2]))
+                    max([12, len(str(round(line[1], 4))) + 2])) + \
+                  aor['scanSpeed'][idx].rjust(12) + \
+                  aor['scanDirection'][idx].rjust(12)
             outfile.write(rot + "\n")
     else:
-        # rot = str(round(rot_mapoffsets[0][0], 4)).rjust(12) +  \
-        #       str(round(rot_mapoffsets[1][0], 4)).rjust(12)
-        rot = str(rot_mapoffsets[0][0]).rjust(12) + \
-              str(rot_mapoffsets[1][0]).rjust(
-                max([12, len(str(rot_mapoffsets[1][0])) + 2]))
-        outfile.write(rot)
+        rot_mapoffsets = np.transpose(np.dot(np.transpose(r), mapoffsets))
+        if len(rot_mapoffsets[0]) > 1:
+            for line in rot_mapoffsets:
+                rot = str(round(line[0], 4)).rjust(12) + \
+                      str(round(line[1], 4)).rjust(
+                        max([12, len(str(round(line[1], 4))) + 2]))
+                outfile.write(rot + "\n")
+        else:
+            # rot = str(round(rot_mapoffsets[0][0], 4)).rjust(12) +  \
+            #       str(round(rot_mapoffsets[1][0], 4)).rjust(12)
+            rot = str(rot_mapoffsets[0][0]).rjust(12) + \
+                  str(rot_mapoffsets[1][0]).rjust(
+                    max([12, len(str(rot_mapoffsets[1][0])) + 2]))
+            outfile.write(rot)
 
     outfile.close()
     # print "%s and %s created." % (fn, values['MAPLISTPATH'])
@@ -492,7 +519,7 @@ def writeFAOR(aor, PropID, PIname, outdir):
     return errmsg
 
 def readSct(filename):
-    """ 
+    """
     Read a *.sct file and return a dictionary.
     """
     print('Loading ', filename)
@@ -500,7 +527,7 @@ def readSct(filename):
         parameters = {}
         with open(filename) as f:
             for line in f:
-                line = line.rstrip('\n') 
+                line = line.rstrip('\n')
                 (val, key) = line.split('#')
                 parameters[key.strip()] = val.strip()
         print(filename, ' read.')
@@ -508,12 +535,12 @@ def readSct(filename):
     except:
         print("This is not a *.sct file")
         return None
-    
+
 def writeSct(sctPars, sctfile):
     """
     Write a *.sct file from a dictionary.
     """
-    fd = QFileDialog()
+    fd = QFileDialog(None, "Save updated .sct file")
     fd.setLabelText(QFileDialog.Accept, "Export as")
     fd.setNameFilters(["Scan description (*.sct)", "All Files (*)"])
     fd.setOptions(QFileDialog.DontUseNativeDialog)
@@ -524,22 +551,24 @@ def writeSct(sctPars, sctfile):
         filenames= fd.selectedFiles()
         filename = filenames[0]
         if filename[-4:] != '.sct':
-            filename += '.sct'              
+            filename += '.sct'
         print("Exporting scan description to file: ", filename)
         with io.open(filename, mode='w') as f:
             for key in sctPars.keys():
-                f.write("{0:25s}#{1:s}\n".format(sctPars[key], key.upper()))
+                if sctPars[key] != "":
+                    f.write("{0:25s}#{1:s}\n".format(sctPars[key], key.upper()))
         print('File '+filename+' exported.')
-    
-    
+        msg = "File " + filename + ' exported.\n'
+    return msg
+
 def readMap(filename=None):
     """
     Import alternate map file.
     """
     if filename is None:
-        fd = QFileDialog()
+        fd = QFileDialog(None, "Load map file")
         fd.setLabelText(QFileDialog.Accept, "Import")
-        fd.setNameFilters(["Fits Files (*.txt)", "All Files (*)"])
+        fd.setNameFilters(["Map Files (*.txt)", "All Files (*)"])
         fd.setOptions(QFileDialog.DontUseNativeDialog)
         fd.setViewMode(QFileDialog.List)
         fd.setFileMode(QFileDialog.ExistingFile)
@@ -562,5 +591,5 @@ def readMap(filename=None):
         return
     file.close()
     mapListPath = filename
-    numMapPoints = numlines - 1 
-    return numMapPoints, mapListPath    
+    numMapPoints = numlines - 1
+    return numMapPoints, mapListPath

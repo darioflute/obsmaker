@@ -86,10 +86,9 @@ def wavelength2inductosyn(wave, dichroic, array, order, obsdate=''):
     Inverse of previous function. Call the previous function to compute the curve and
     uses interpolation to invert the function.
     """
-    
+
     grating = np.arange(0,3000,10)*1000.
     w, dw = inductosyn2wavelength(grating, dichroic, array, order, obsdate)
-    
+
     return np.interp(wave, np.mean(w, axis=(1,2)), grating)
-    
-    
+

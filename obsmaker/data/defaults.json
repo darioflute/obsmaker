@@ -56,7 +56,7 @@
 "obs_ref_srctypes" : ["POINT_SOURCE", "COMPACT_SOURCE",
     "EXTENDED_SOURCE", "OTHER"],
 "obs_ref_instmodes" : ["SYMMETRIC_CHOP", "ASYMMETRIC_CHOP", "BRIGHT_OBJECT",
-    "SPECTRAL_SCAN", "TOTAL_POWER", "SKY"],
+    "SPECTRAL_SCAN", "TOTAL_POWER", "SKY", "OTF_TP"],
 
 "t_ta_move" : 8.0,
 "t_grating_move" : 0.0,
