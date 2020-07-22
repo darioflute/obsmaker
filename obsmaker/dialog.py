@@ -227,7 +227,7 @@ class TableWidget(QWidget):
         self.redGratPosUnits.setReadOnly(True)
         c4.addRow(QLabel('Spectral mode'),None)
         self.redGratPattern = addComboBox('Grating movement pattern: ', self.gratpatterns, c4)
-        self.redStepSizeUp = createEditableBox('0', 70, 'Step size up [pixels]: ', c4, 'double')
+        self.redStepSizeUp = createEditableBox(str(self.gratstepsize), 70, 'Step size up [pixels]: ', c4, 'double')
         self.redGratPosUp = createEditableBox('1', 70, 'Grating position up: ', c4, 'int')
         self.redStepSizeDown = createEditableBox('0', 70, 'Step size down [pixels]: ', c4, 'double')
         self.redGratPosDown = createEditableBox('0', 70, 'Grating position down: ', c4, 'int')
@@ -266,7 +266,7 @@ class TableWidget(QWidget):
         self.blueGratPosUnits.setReadOnly(True)
         c5.addRow(QLabel('Spectral mode'),None)
         self.blueGratPattern = addComboBox('Grating movement pattern: ', self.gratpatterns, c5)
-        self.blueStepSizeUp = createEditableBox('0', 70, 'Step size up [pixels]: ', c5)
+        self.blueStepSizeUp = createEditableBox(str(self.gratstepsize), 70, 'Step size up [pixels]: ', c5)
         self.blueGratPosUp = createEditableBox('1', 70, 'Grating position up: ', c5)
         self.blueStepSizeDown = createEditableBox('0', 70, 'Step size down [pixels]: ', c5)
         self.blueGratPosDown = createEditableBox('0', 70, 'Grating position down: ', c5)
@@ -518,6 +518,13 @@ class TableWidget(QWidget):
         """Reaction to change of obsMode."""
         instmode = self.instmodes[index]    #; print('instmode changed to', instmode)
         self.detectorAngle.label.setText('Detector angle (E of N):')
+        # Update the Chopping scheme
+        if instmode == 'TOTAL_POWER':
+            index = self.chopScheme.findText("TOTAL_POWER", Qt.MatchFixedString)
+            self.chopScheme.setCurrentIndex(index)
+        else:
+            index = self.chopScheme.findText("2POINT", Qt.MatchFixedString)
+            self.chopScheme.setCurrentIndex(index)        
         if instmode in ['SYMMETRIC_CHOP','SPECTRAL_SCAN','BRIGHT_OBJECT','SKY']:
             index = self.observingMode.findText('Symmetric', Qt.MatchFixedString)
             self.observingMode.setCurrentIndex(index)
@@ -658,11 +665,11 @@ class TableWidget(QWidget):
             self.redGratPattern.setCurrentIndex(index)
             self.blueGratPattern.setCurrentIndex(index)
             if self.var['scandist'] == 'Up':
-                self.redStepSizeUp.setText('0')
+                self.redStepSizeUp.setText(str(self.gratstepsize))
                 self.redGratPosUp.setText('1')
                 self.redStepSizeDown.setText('0')
                 self.redGratPosDown.setText('0')
-                self.blueStepSizeUp.setText('0')
+                self.blueStepSizeUp.setText(str(self.gratstepsize))
                 self.blueGratPosUp.setText('1')
                 self.blueStepSizeDown.setText('0')
                 self.blueGratPosDown.setText('0')
@@ -816,6 +823,7 @@ class TableWidget(QWidget):
         self.f_chop = config["f_chop"]
         self.chop_phase_default = config["chop_phase_default"]
         self.obs_con_samplesize = config["obs_con_samplesize"]
+        self.gratstepsize = config["grating_step"]
         self.c = config["speed_of_light"]
 
     def defineConversion(self):
@@ -973,7 +981,7 @@ class TableWidget(QWidget):
 
         # NODCYCLES should be updated in nodcyclesPerMapPosition, too
         self.nodcyclesPerMapPosition.setText(aorPars['NODCYCLES'])
-
+       
     def buildObs(self):
         """
         Save GUI parameters and calculate observation.

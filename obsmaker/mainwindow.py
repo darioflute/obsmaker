@@ -150,27 +150,27 @@ class GUI(QMainWindow):
 
     def loadMapFile(self):
         """Load a map file."""
-        #fd = QFileDialog()
-        #fd.setLabelText(QFileDialog.Accept, "Import")
-        #fd.setNameFilters(["Fits Files (*.txt)", "All Files (*)"])
-        #fd.setOptions(QFileDialog.DontUseNativeDialog)
-        #fd.setViewMode(QFileDialog.List)
-        #fd.setFileMode(QFileDialog.ExistingFile)
-        #if (fd.exec()):
-        #    fileName= fd.selectedFiles()
-        #    mapfile = fileName[0]
-        #    try:
-        #        noMapPoints, mapListPath = readMap(mapfile)
-        #        self.TW.mapListPath = mapListPath
-        #        self.TW.noMapPoints.setText(str(noMapPoints))
-        #    except:
-        #        print('Invalid map file.')
-        try:
-            noMapPoints, mapListPath = readMap()
-            self.TW.mapListPath = mapListPath
-            self.TW.noMapPoints.setText(str(noMapPoints))
-        except:
-            print('Invalid map file.')
+        fd = QFileDialog()
+        fd.setLabelText(QFileDialog.Accept, "Import")
+        fd.setNameFilters(["Fits Files (*.txt)", "All Files (*)"])
+        fd.setOptions(QFileDialog.DontUseNativeDialog)
+        fd.setViewMode(QFileDialog.List)
+        fd.setFileMode(QFileDialog.ExistingFile)
+        if (fd.exec()):
+            fileName= fd.selectedFiles()
+            mapfile = fileName[0]
+            try:
+                noMapPoints, mapListPath = readMap(mapfile)
+                self.TW.mapListPath = mapListPath
+                self.TW.noMapPoints.setText(str(noMapPoints))
+            except:
+                print('Invalid map file.')
+        #try:
+        #    noMapPoints, mapListPath = readMap()
+        #    self.TW.mapListPath = mapListPath
+        #    self.TW.noMapPoints.setText(str(noMapPoints))
+        #except:
+        #    print('Invalid map file.')
 
 
 

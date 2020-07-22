@@ -53,7 +53,7 @@
     "STANDARD_WAVECAL","LAMP", "FLAT", "DARK", "BIAS", "SKY", "BB",
     "GASCELL", "LASER", "FOCUS_LOOP", "BORESIGHT"],
 "obs_ref_chop_schemes" : ["2POINT", "4POINT", "TOTAL_POWER"],
-"obs_ref_srctypes" : ["POINT_SOURCE", "COMPACT_SOURCE",
+"obs_ref_srctypes" : ["COMPACT_SOURCE", "POINT_SOURCE", 
     "EXTENDED_SOURCE", "OTHER"],
 "obs_ref_instmodes" : ["SYMMETRIC_CHOP", "ASYMMETRIC_CHOP", "BRIGHT_OBJECT",
     "SPECTRAL_SCAN", "TOTAL_POWER", "SKY", "OTF_TP"],
@@ -64,5 +64,6 @@
 "f_chop" : 2.0,
 "chop_phase_default": 356,
 "_comment": "250.0 SOFIA clock, 256.0 lab clock",
-"obs_con_samplesize": 250.0
+"obs_con_samplesize": 250.0,
+"grating_step": 0.75
 }
