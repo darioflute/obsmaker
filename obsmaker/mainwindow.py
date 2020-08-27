@@ -14,17 +14,11 @@ class GUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.title = 'Observation maker for FIFI-LS: version ' + __version__
-        # self.left = 0
-        # self.top = 0
-        # self.width = 300
-        # self.height = 200
         self.setWindowTitle(self.title)
-        # self.setGeometry(self.left, self.top, self.width, self.height)
         # Define main widget
         wid = QWidget()
         self.setCentralWidget(wid)
         mainLayout = QHBoxLayout(wid)
-
         # Add dialog to main layout
         self.TW = TableWidget(self)
         mainLayout.addWidget(self.TW)
@@ -50,7 +44,7 @@ class GUI(QMainWindow):
         fd.setOptions(QFileDialog.DontUseNativeDialog)
         fd.setViewMode(QFileDialog.List)
         fd.setFileMode(QFileDialog.ExistingFile)
-        if (fd.exec()):
+        if fd.exec():
             fileName= fd.selectedFiles()
             aorfile = fileName[0]
             print('Reading file ', aorfile)
@@ -63,8 +57,8 @@ class GUI(QMainWindow):
             tree = ET.ElementTree(file=aorfile)  # or tree = ET.parse(aorfile)
             vector = tree.find('list/vector')
             # Extract Target and Instrument from each AOR
-            targets = [(item.text) for item in vector.findall('Request/target/name')]
-            instruments = [(item.text) for item in vector.findall('Request/instrument/data/InstrumentName')]
+            targets = [item.text for item in vector.findall('Request/target/name')]
+            instruments = [item.text for item in vector.findall('Request/instrument/data/InstrumentName')]
             print('targets ', targets)
             print('instruments ', instruments)
             # Unique combinations of target and instrument
@@ -113,7 +107,7 @@ class GUI(QMainWindow):
         fd.setOptions(QFileDialog.DontUseNativeDialog)
         fd.setViewMode(QFileDialog.List)
         fd.setFileMode(QFileDialog.ExistingFile)
-        if (fd.exec()):
+        if fd.exec():
             fileName= fd.selectedFiles()
             sctfile = fileName[0]
             self.title = 'Observation maker for FIFI-LS ['+sctfile+']'
@@ -125,7 +119,7 @@ class GUI(QMainWindow):
             self.TW.sctfile = sctfile
             self.aorParameters = readSct(sctfile)
             # self.TW.update_status(errmsg)
-            self.TW.update(self.aorParameters)
+            self.TW.update_gui(self.aorParameters)
             self.sctpath = os.path.dirname(os.path.abspath(sctfile))
             # self.TW.sctdir.setText(sctpath) Initiliaze with path of read file
             mapfile = os.path.basename(self.TW.mapListPath)
@@ -150,29 +144,27 @@ class GUI(QMainWindow):
 
     def loadMapFile(self):
         """Load a map file."""
-        fd = QFileDialog()
-        fd.setLabelText(QFileDialog.Accept, "Import")
-        fd.setNameFilters(["Fits Files (*.txt)", "All Files (*)"])
-        fd.setOptions(QFileDialog.DontUseNativeDialog)
-        fd.setViewMode(QFileDialog.List)
-        fd.setFileMode(QFileDialog.ExistingFile)
-        if (fd.exec()):
-            fileName= fd.selectedFiles()
-            mapfile = fileName[0]
-            try:
-                noMapPoints, mapListPath = readMap(mapfile)
-                self.TW.mapListPath = mapListPath
-                self.TW.noMapPoints.setText(str(noMapPoints))
-            except:
-                print('Invalid map file.')
-        #try:
-        #    noMapPoints, mapListPath = readMap()
-        #    self.TW.mapListPath = mapListPath
-        #    self.TW.noMapPoints.setText(str(noMapPoints))
-        #except:
-        #    print('Invalid map file.')
-
-
+        #fd = QFileDialog()
+        #fd.setLabelText(QFileDialog.Accept, "Import")
+        #fd.setNameFilters(["Fits Files (*.txt)", "All Files (*)"])
+        #fd.setOptions(QFileDialog.DontUseNativeDialog)
+        #fd.setViewMode(QFileDialog.List)
+        #fd.setFileMode(QFileDialog.ExistingFile)
+        #if (fd.exec()):
+        #    fileName= fd.selectedFiles()
+        #    mapfile = fileName[0]
+        #    try:
+        #        noMapPoints, mapListPath = readMap(mapfile)
+        #        self.TW.mapListPath = mapListPath
+        #        self.TW.noMapPoints.setText(str(noMapPoints))
+        #    except:
+        #        print('Invalid map file.')
+        try:
+            noMapPoints, mapListPath = readMap()
+            self.TW.mapListPath = mapListPath
+            self.TW.noMapPoints.setText(str(noMapPoints))
+        except:
+            print('Invalid map file.')
 
     def exitObsmaker(self):
         self.close()
@@ -189,7 +181,6 @@ def main():
     screen_resolution = app.desktop().screenGeometry()
     width = screen_resolution.width()
     height = screen_resolution.height()
-    # gui.setGeometry(width*0.01, 0, width*0.5, width*0.2)
-    gui.setGeometry(width*0.01, 0, width*0.96, height*0.92)
+    gui.setGeometry(width*0.01, 0, width*0.96, height*0.92)  # X, Y, W, H
 
     sys.exit(app.exec_())

@@ -3,13 +3,14 @@ import pandas as pd
 import os
 import time
 
+
 def inductosyn2wavelength(gratpos, dichroic, array, order, obsdate=''):
-    '''
+    """
     Usage:
     l,lw = inductosyn2wavelength(gratpos=1496600, order=1, array='RED',
                    dichroic=105, obsdate='1909')
-    '''
-	# if obsdate not specified, assume today
+    """
+    # if obsdate not specified, assume today
     if obsdate == '':
         today = str(time.gmtime().tm_year)[2:]
         today += ('0' + str(time.gmtime().tm_mon))[-2:]
@@ -36,7 +37,7 @@ def inductosyn2wavelength(gratpos, dichroic, array, order, obsdate=''):
             pass
         else:
             break
-    cols = range(2 + 4 * i , 2 + 4 * i + 4)
+    cols = range(2 + 4 * i, 2 + 4 * i + 4)
     w1 = wvdf[wvdf.columns[cols]].copy()
     if channel == 'R':
         if dichroic == 105:
@@ -81,14 +82,14 @@ def inductosyn2wavelength(gratpos, dichroic, array, order, obsdate=''):
 
     return result, result_dwdp
 
+
 def wavelength2inductosyn(wave, dichroic, array, order, obsdate=''):
     """
     Inverse of previous function. Call the previous function to compute the curve and
     uses interpolation to invert the function.
     """
 
-    grating = np.arange(0,3000,10)*1000.
+    grating = np.arange(0, 3000, 10) * 1000.
     w, dw = inductosyn2wavelength(grating, dichroic, array, order, obsdate)
 
-    return np.interp(wave, np.mean(w, axis=(1,2)), grating)
-
+    return np.interp(wave, np.mean(w, axis=(1, 2)), grating)

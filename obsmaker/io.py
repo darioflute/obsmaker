@@ -3,11 +3,17 @@ import io
 import math
 import json
 import numpy as np
+from astropy.coordinates import SkyCoord
+from astropy import units as u
 from PyQt5.QtWidgets import (QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
                              QLabel, QLineEdit, QFormLayout, QFileDialog, QSizePolicy)
 from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from PyQt5.QtCore import Qt
 
+path = os.path.dirname(os.path.realpath(__file__))
+file = os.path.join(path, "data", "keywords.json")
+with open(file) as f:
+    config = json.load(f)
 
 def add2widgets(text, widget1, widget2, layout):
     box = QWidget()
@@ -93,26 +99,6 @@ def velocity2z(v):
     c = 299792.458 # km/s
     return v/c
 
-def radec(xra, xdec):
-    '''
-    radec.pro (IDL astrolib) translated to Python
-    inputs: xra = RA in decimal degrees, xdec = DEC in decimal degrees
-    outputs: [ihr, imin, xsec, ideg, imn, xsc] (RA-DEC sexigesimal)
-    '''
-    # convert RA
-    ihr = int(xra / 15.)
-    xmin = abs(xra * 4.0 - ihr * 60.0)
-    imin = int(xmin)
-    xsec = (xmin - imin) * 60.0
-    # convert DEC
-    ideg = int(xdec)
-    xmn = abs(xdec - ideg) * 60.
-    imn = int(xmn)
-    xsc = (xmn - imn) * 60.
-
-    return [ihr, imin, xsec, ideg, imn, xsc]
-
-
 def readAOR(vector):
     '''
     extracts values from <Request> for tagnames defined in definitions.py
@@ -124,10 +110,6 @@ def readAOR(vector):
     # are to be written
 
     # Reading tagnames
-    path = os.path.dirname(os.path.realpath(__file__))
-    file = os.path.join(path, "data", "keywords.json")
-    with open(file) as f:
-        config = json.load(f)
     tagnames = config['tagnames']
     aor = dict.fromkeys(tagnames)
 
@@ -153,14 +135,9 @@ def writeFAOR(aor, PropID, PIname, outdir):
     input: output of FI_read_aor
     output: .sct and _map.txt files in outdir
     '''
-    # Reading keywords and tagnames
-    path = os.path.dirname(os.path.realpath(__file__))
-    file = os.path.join(path, "data", "keywords.json")
-    with open(file) as f:
-        config = json.load(f)
+    # Reading keywords
     keywords = config['keywords']
-    tagnames = config['tagnames']
-    values=dict.fromkeys(keywords)
+    values = dict.fromkeys(keywords)
 
     # set default values
     values['MAPCOORD_SYSTEM'] = config['MAPCOORD_SYSTEM_default']  # 'J2000'
@@ -223,20 +200,15 @@ def writeFAOR(aor, PropID, PIname, outdir):
     if aor['equinoxDesc'][0] != 'J2000':
         # print 'Not J2000 Coordinates'
         errmsg += 'Not J2000 Coordinates\n'
-    ra = float(aor['lon'][0])   # in decimal degrees
-    dec = float(aor['lat'][0])  # in decimal degrees
-    # convert ra, dec in decimal degrees to hh mm ss, dd mm ss
-    ihr, imin, xsec, ideg, imn, xsc = radec(ra, dec)
-    sra =  str(ihr) + ' ' + str(imin) + ' ' + str(round(xsec, 2))
-    sdec = '+' * (ideg >= 0) + str(ideg) + ' ' + str(imn) + ' ' + \
-        str(round(xsc, 1))
-    values['TARGET_LAMBDA'] = sra
-    values['TARGET_BETA'] = sdec
+    coord_deg = SkyCoord(ra=float(aor['lon'][0]), dec=float(aor['lat'][0]), unit="deg")
+    values['TARGET_LAMBDA'] = coord_deg.ra.to_string(sep=' ', precision=2, pad=True, unit=u.hourangle)
+    values['TARGET_BETA'] = coord_deg.dec.to_string(sep=' ', precision=1, pad=True, alwayssign=True)
 
     values['NODPATTERN'] = aor['NodPattern'][0]   # new in Cycle 9
     # older cycle ObsPlans downloaded w/ Cycle 9 USpot will have incorrect
     # NodPattern so fix it here -- will comment out/delete this part later
-    if values['AORID'][0:2] in ['03', '04', '05', '06', '07', '08']:
+    if values['AORID'][0:2] in ['03', '04', '05', '06', '07', '08'] or \
+            values['NODPATTERN'] == "":
         if values['INSTMODE'] == 'SYMMETRIC_CHOP': values['NODPATTERN'] = 'ABBA'
         if values['INSTMODE'] in ['ASYMMETRIC_CHOP', 'TOTAL_POWER', 'SPECTRAL_SCAN']:
             values['NODPATTERN'] = 'ABA'
@@ -484,8 +456,8 @@ def writeFAOR(aor, PropID, PIname, outdir):
     #write map file
     outfile = open(os.path.join(outdir, values['MAPLISTPATH'].replace(
         '@', '')), 'w')
-    outfile.write("%s%s" % (str(values['TARGET_LAMBDA']).rjust(12),
-        str(values['TARGET_BETA']).rjust(12) + "\n"))
+    outfile.write("%s%s" % (values['TARGET_LAMBDA'].rjust(12),
+                            values['TARGET_BETA'].rjust(12) + "\n"))
 
     if values['INSTMODE'] == 'OTF_TP':  # do not rotate here; rotate in ObsMaker
         rot_mapoffsets = np.transpose(mapoffsets)
@@ -546,7 +518,7 @@ def writeSct(sctPars, sctfile):
     fd.setOptions(QFileDialog.DontUseNativeDialog)
     fd.setViewMode(QFileDialog.List)
     fd.selectFile(sctfile)
-    if (fd.exec()):
+    if fd.exec():
         #fd.getSaveFileName(directory=sctfile)
         filenames= fd.selectedFiles()
         filename = filenames[0]
@@ -572,7 +544,7 @@ def readMap(filename=None):
         fd.setOptions(QFileDialog.DontUseNativeDialog)
         fd.setViewMode(QFileDialog.List)
         fd.setFileMode(QFileDialog.ExistingFile)
-        if (fd.exec()):
+        if fd.exec():
             fileNames= fd.selectedFiles()
             filename = fileNames[0]
     else:
