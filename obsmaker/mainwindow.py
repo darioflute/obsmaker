@@ -95,8 +95,8 @@ class GUI(QMainWindow):
                         print('write translated AOR')
                         errmsg += writeFAOR(obs, PropID, PIname,
                             os.path.dirname(os.path.abspath(aorfile)))
-                        self.TW.update_status(errmsg)
-            # return errmsg
+                else: errmsg += 'Skipping a non-FIFI-LS aor.\n'
+            self.TW.update_status(errmsg)
 
     def loadTemplate(self):
         """Load a sct file."""

@@ -529,8 +529,9 @@ def writeSct(sctPars, sctfile):
             for key in sctPars.keys():
                 if sctPars[key] != "":
                     f.write("{0:25s}#{1:s}\n".format(sctPars[key], key.upper()))
-        print('File '+filename+' exported.')
+        print('File ' + filename + ' exported.')
         msg = "File " + filename + ' exported.\n'
+    else: msg = 'Updated .sct file not saved.\n'
     return msg
 
 def readMap(filename=None):

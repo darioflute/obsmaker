@@ -49,14 +49,17 @@
     "deltaY",
     "scanSpeed",
     "scanDirection"],
+
 "max_stepsize_inPix" :  1.5,
 "max_grmov_per_scn_inPix" : 4,
 "red_coef": [0.00520206, 0.0000207186, -1.50255e-06],
 "blue1_coef": [0.00364765, 0.0000297473, -2.65335e-06],
 "blue2_coef": [0.00182424, 0.0000297386, -5.30542e-06],
+
 "obs_con_red_pixelsize" : 730.00,
 "obs_con_blue_pixelsize" : 800.00,
 "gratstepsize": 0.75,
+
 "keywords" : [
     "OBSMODE",
     "PRIMARYARRAY",
@@ -133,31 +136,39 @@
     "OBSERVER",
     "TIME_POINT"
 ],
+
 "MAPCOORD_SYSTEM_default" : "J2000",
 "PATTERN_default" : "File",
 "DITHMAP_STEPSIZE_default" : "n/a",
 "DITHMAP_LAMBDA_default" : 0.0,
 "DITHMAP_BETA_default" : 0.0,
+
 "CHOPPHASE_default" : "Default",
 "CHOP_MANUALPHASE_default" : "n/a",
 "CHOP_LENGTH_default" : 64,
+
 "OBSTYPE_default" : "OBJECT",
 "NODPATTERN_default" : "ABBA",
 "REWIND_default" : "Auto",
 "OFFPOS_REDUC_default" : 1.0,
+
 "SETPOINT_default" : "n/a",
+
 "BLUE_GRTCYC_default" : 1,
 "BLUE_SIZEDOWN_default" : 0.0,
 "BLUE_POSDOWN_default" : 0,
 "RED_GRTCYC_default" : 1,
 "RED_SIZEDOWN_default" : 0.0,
 "RED_POSDOWN_default" : 0,
+
 "BLUE_RAMPLEN_default" : 32,
 "RED_RAMPLEN_default" : 32,
+
 "BLUE_ZBIAS_default" : 75,
 "BLUE_BIASR_default" : 0,
 "RED_ZBIAS_default" : 60,
 "RED_BIASR_default" : 0,
 "BLUE_CAPACITOR_default" : 1330,
 "RED_CAPACITOR_default" : 1330
+
 }

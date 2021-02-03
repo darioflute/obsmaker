@@ -4,12 +4,20 @@ from PyQt5.QtWidgets import (QWidget, QTabWidget, QVBoxLayout, QComboBox,
 from PyQt5.QtCore import Qt, QObject
 from PyQt5.QtGui import QTextCursor, QIntValidator
 import os
+import json
 import math
 import numpy as np
+from astropy.coordinates import SkyCoord
+from astropy import units as u
 from obsmaker.grating import inductosyn2wavelength, wavelength2inductosyn
 from obsmaker.io import (velocity2z, writeSct, readMap, add2widgets, addComboBox,
                          createEditableBox, createWidget, createButton)
 
+
+this_dir = os.path.dirname(os.path.realpath(__file__))
+file = os.path.join(this_dir, "data", "defaults.json")
+with open(file) as f:
+    defaults = json.load(f)
 
 def mround(number, multiple):
     """
@@ -318,9 +326,6 @@ class TableWidget(QWidget):
         """Action triggered by editing the redshift box."""
         try:
             z = float(self.redshift.text())
-            # Update digits
-            self.redshift.setText(str(z))
-            self.var['redshift'] = z
             # Update line offsets in km/s
             cz = self.c * z  # velocity in km/s
             self.redOffset.setText("{0:.0f}".format(cz))
@@ -336,13 +341,10 @@ class TableWidget(QWidget):
         self.writeObservation.setEnabled(False)
 
     def velocityUpdated(self):
-        """Action triggered by editing the redshift box."""
+        """Action triggered by editing the velocity box."""
         try:
             cz = float(self.velocity.text())
-            # Update digits
             z = cz / self.c
-            self.redshift.setText(str(z))
-            self.var['redshift'] = z
             self.redshift.setText(str(round(z, 8)))
             # Update line offsets in km/s
             self.redOffset.setText("{0:.0f}".format(cz))
@@ -361,7 +363,6 @@ class TableWidget(QWidget):
         """Action triggered by PI Name box."""
         try:
             piname = self.piName.text()
-            self.var['observer'] = piname
         except:
             print('Invalid PI name')
         self.writeObservation.setEnabled(False)
@@ -372,7 +373,6 @@ class TableWidget(QWidget):
             try:
                 cz = float(self.redOffset.text())
                 z = cz / self.c
-                self.var['redshift'] = z
                 self.blueOffset.setText("{0:.0f}".format(cz))
                 self.velocity.setText("{0:.0f}".format(cz))
                 # Set the units to km/s
@@ -391,7 +391,6 @@ class TableWidget(QWidget):
             try:
                 cz = float(self.blueOffset.text())
                 z = cz / self.c
-                self.var['redshift'] = z
                 self.redOffset.setText("{0:.0f}".format(cz))
                 self.velocity.setText("{0:.0f}".format(cz))
                 # Set the units to km/s
@@ -470,10 +469,6 @@ class TableWidget(QWidget):
         """Reaction to change of obsMode triggered by change of instrumentalMode."""
         obsmode = self.observingmodes[index]
         if obsmode == 'Symmetric':
-            self.var['offpos'] = 'Matched'
-            self.var['symmetry'] = 'Symmetric'
-            # index = self.instrumentalMode.findText('SYMMETRIC_CHOP', Qt.MatchFixedString)
-            # self.instrumentalMode.setCurrentIndex(index)
             index = self.offPosition.findText('Matched', Qt.MatchFixedString)
             self.offPosition.setCurrentIndex(index)
             # disable labels and entryboxes beneath
@@ -490,10 +485,6 @@ class TableWidget(QWidget):
             self.trackingInB.label.hide()
             # self.trackingInB.setEnabled(False)
         else:
-            self.var['offpos'] = 'Relative to target'
-            self.var['symmetry'] = 'Asymmetric'
-            # index = self.instrumentalMode.findText('ASYMMETRIC_CHOP', Qt.MatchFixedString)
-            # self.instrumentalMode.setCurrentIndex(index)
             index = self.offPosition.findText('Relative to target', Qt.MatchFixedString)
             self.offPosition.setCurrentIndex(index)
             # enable labels and entryboxes beneath
@@ -512,21 +503,19 @@ class TableWidget(QWidget):
         self.writeObservation.setEnabled(False)
 
     def instrumentalModeChange(self, index):
-        """Reaction to change of obsMode."""
+        """Reaction to change of instrumentalMode."""
         instmode = self.instmodes[index]  # ; print('instmode changed to', instmode)
         self.detectorAngle.label.setText('Detector angle (E of N):')
         # Update the Chopping scheme
-        if instmode == 'TOTAL_POWER':
-            index = self.chopScheme.findText("TOTAL_POWER", Qt.MatchFixedString)
-            self.chopScheme.setCurrentIndex(index)
-        else:
-            index = self.chopScheme.findText("2POINT", Qt.MatchFixedString)
-            self.chopScheme.setCurrentIndex(index)
+        # if instmode == 'TOTAL_POWER':
+        #     index = self.chopScheme.findText("TOTAL_POWER", Qt.MatchFixedString)
+        #     self.chopScheme.setCurrentIndex(index)
+        # else:
+        #     index = self.chopScheme.findText("2POINT", Qt.MatchFixedString)
+        #     self.chopScheme.setCurrentIndex(index)
         if instmode in ['SYMMETRIC_CHOP','SPECTRAL_SCAN','BRIGHT_OBJECT','SKY']:
             index = self.observingMode.findText('Symmetric', Qt.MatchFixedString)
             self.observingMode.setCurrentIndex(index)
-            index = self.offPosition.findText('Matched', Qt.MatchFixedString)
-            self.offPosition.setCurrentIndex(index)
             # disable labels and entryboxes beneath
             self.lambdaOffPos.setReadOnly(True)
             self.betaOffPos.setReadOnly(True)
@@ -547,8 +536,7 @@ class TableWidget(QWidget):
             else:
                 self.observingMode.setEnabled(True)
             if instmode in ['SYMMETRIC_CHOP', 'SPECTRAL_SCAN', 'BRIGHT_OBJECT']:
-                if self.var['chop_amp'] == 0:
-                    self.var['chop_amp'] = 60.  # 120
+                if self.chopAmp.text().strip() in ['', '0', '0.0']:
                     self.chopAmp.setText('60')
                 if instmode != 'SYMMETRIC_CHOP':
                     index = self.nodPattern.findText('ABA', Qt.MatchFixedString)
@@ -560,10 +548,6 @@ class TableWidget(QWidget):
             index = self.observingMode.findText('Asymmetric', Qt.MatchFixedString)
             self.observingMode.setCurrentIndex(index)
             self.observingMode.setEnabled(False)
-            self.var['offpos'] = 'Relative to target'
-            self.var['symmetry'] = 'Asymmetric'
-            index = self.offPosition.findText('Relative to target', Qt.MatchFixedString)
-            self.offPosition.setCurrentIndex(index)
             # enable labels and entryboxes beneath
             self.lambdaOffPos.setReadOnly(False)
             self.betaOffPos.setReadOnly(False)
@@ -577,7 +561,6 @@ class TableWidget(QWidget):
             self.trackingInB.show()
             self.trackingInB.label.show()
             if instmode in ['TOTAL_POWER', 'OTF_TP']:
-                self.var['chop_amp'] = 0.0
                 self.chopAmp.setText('0')
                 self.chopAmp.setReadOnly(True)
                 if instmode == 'OTF_TP':
@@ -588,7 +571,6 @@ class TableWidget(QWidget):
                     index = self.nodPattern.findText('ABA', Qt.MatchFixedString)
                     self.nodPattern.setCurrentIndex(index)
             else:
-                self.var['chop_amp'] = 60.0
                 self.chopAmp.setText('60')
                 self.chopAmp.setReadOnly(False)
                 index = self.nodPattern.findText('ABA', Qt.MatchFixedString)
@@ -795,33 +777,27 @@ class TableWidget(QWidget):
 
     def readDefaults(self):
         """Read input file with defaults."""
-        import json
-        import os
-        this_dir = os.path.dirname(os.path.realpath(__file__))
-        file = os.path.join(this_dir, "data", "defaults.json")
-        with open(file) as f:
-            config = json.load(f)
-        self.refTargetSystems = config["obs_ref_target_systems"]
-        self.redlines = config["obs_ref_red_lines"]
-        self.redwaves = config["obs_ref_red_lambdas"]
-        self.bluelines = config["obs_ref_blue_lines"]
-        self.bluewaves = config["obs_ref_blue_lambdas"]
-        self.refpatterns = config["obs_ref_patterns"]
-        self.obstypes = config["obs_ref_obstypes"]
-        self.chopschemes = config["obs_ref_chop_schemes"]
-        self.chopcoordsys = config["obs_ref_chopcoord_systems"]
-        self.mapcoordsys = config["obs_ref_mapcoord_systems"]
-        self.sourcetypes = config["obs_ref_srctypes"]
-        self.instmodes = config["obs_ref_instmodes"]
-        self.capacitors = config["obs_ref_red_capacitors"]
-        self.obs_eff = config["obs_eff"]
-        self.t_ta_move = config["t_ta_move"]
-        self.t_grating_move = config["t_grating_move"]
-        self.f_chop = config["f_chop"]
-        self.chop_phase_default = config["chop_phase_default"]
-        self.obs_con_samplesize = config["obs_con_samplesize"]
-        self.gratstepsize = config["grating_step"]
-        self.c = config["speed_of_light"]
+        self.refTargetSystems = defaults["obs_ref_target_systems"]
+        self.redlines = defaults["obs_ref_red_lines"]
+        self.redwaves = defaults["obs_ref_red_lambdas"]
+        self.bluelines = defaults["obs_ref_blue_lines"]
+        self.bluewaves = defaults["obs_ref_blue_lambdas"]
+        self.refpatterns = defaults["obs_ref_patterns"]
+        self.obstypes = defaults["obs_ref_obstypes"]
+        self.chopschemes = defaults["obs_ref_chop_schemes"]
+        self.chopcoordsys = defaults["obs_ref_chopcoord_systems"]
+        self.mapcoordsys = defaults["obs_ref_mapcoord_systems"]
+        self.sourcetypes = defaults["obs_ref_srctypes"]
+        self.instmodes = defaults["obs_ref_instmodes"]
+        self.capacitors = defaults["obs_ref_red_capacitors"]
+        self.obs_eff = defaults["obs_eff"]
+        self.t_ta_move = defaults["t_ta_move"]
+        self.t_grating_move = defaults["t_grating_move"]
+        self.f_chop = defaults["f_chop"]
+        self.chop_phase_default = defaults["chop_phase_default"]
+        self.obs_con_samplesize = defaults["obs_con_samplesize"]
+        self.gratstepsize = defaults["grating_step"]
+        self.c = defaults["speed_of_light"]
 
     def defineConversion(self):
         self.k2tw = {
@@ -991,19 +967,22 @@ class TableWidget(QWidget):
                 return
             self.writeObservation.setEnabled(False)
             print('nodcycles before gui2vars ', self.var['nodcycles'])
-            self.gui2vars()
-            print('path file before calculate is: ', self.pathFile)
-            print('nodcycles before calculate are: ', self.var['nodcycles'])
-            self.calculate()
-            print('path file after calculate is: ', self.pathFile)
-            self.var['ind_scanindex'] = 0
-            self.var['commandline_option'] = '0'  # No command line option for the moment
-            print('Observation built')
-            self.update_status("Observation built. \n")
-            self.writeObservation.setEnabled(True)
-            self.chopCompute.setEnabled(True)
+            result = self.gui2vars()
+            if result != False:
+                print('path file before calculate is: ', self.pathFile)
+                print('nodcycles before calculate are: ', self.var['nodcycles'])
+                result = self.calculate()
+                if result != False:
+                    print('path file after calculate is: ', self.pathFile)
+                    self.var['ind_scanindex'] = 0
+                    self.var['commandline_option'] = '0'  # No command line option for the moment
+                    print('Observation built')
+                    self.update_status("Observation built. \n")
+                    self.writeObservation.setEnabled(True)
+                    self.chopCompute.setEnabled(True)
+                    # from pprint import pprint; pprint(self.var)
         except:
-            message = 'Upload a template before building the observation.'
+            message = 'Something went wrong during building the observation.'
             QMessageBox.about(self, "Build", message)
             print(message)
 
@@ -1086,20 +1065,17 @@ class TableWidget(QWidget):
 
         # calculate any "support" variables needed
         self.var['target_lambda_hms'] = self.var['target_lambda']
-        # target RA in decimal Hours
-        rah, ram, ras = self.var['target_lambda'].split()
-        target_ra_decim = float(rah) + float(ram) / 60.0 + float(ras) / 3600.
-        # target RA in decimal degrees
-        self.var['target_lambda_deg'] = (target_ra_decim / 24.0) * 360.
-        # target Beta
         self.var['target_beta_dms'] = self.var['target_beta']
-        dd, dm, ds = self.var['target_beta'].split()
-        target_dec_decim = np.abs(float(dd)) + float(dm) / 60. + float(ds) / 3600.
-        # target DEC in decimal degrees
-        if dd[0] == "-":
-            self.var['target_beta_deg'] = -1.0 * target_dec_decim
-        else:
-            self.var['target_beta_deg'] = target_dec_decim
+        coord = " ".join([self.var['target_lambda'], self.var['target_beta']])
+        try:
+            coord_deg = SkyCoord(coord, unit=(u.hourangle, u.deg))
+        except:
+            message = 'Invalid Target RA-DEC.'
+            QMessageBox.about(self, "Target", message)
+            return False
+        # target RA/DEC in decimal degrees
+        self.var['target_lambda_deg'] = coord_deg.ra.degree
+        self.var['target_beta_deg'] = coord_deg.dec.degree
         # calculate grating step sizes in inductosyn units (isu)
         redPixelsize = 730.0
         bluePixelsize = 800.0
@@ -1124,18 +1100,18 @@ class TableWidget(QWidget):
         result = self.calcTiming()  # calculate timing, update GUI
         if result == False:
             print("ERROR in calc_timing")
-            return
+            return False
         print('path file after calctiming is: ', self.pathFile)
 
         result = self.calcInductosynPos()  # calculate inductosyn position, update GUI
         if result == False:
             print('ERROR in calc_lookup')
-            return
+            return False
         print('path file after calcinductonsynpos is: ', self.pathFile)
         result = self.calcGrtpos()  # calculate grating positions and movements
         if result == False:
             print('ERROR in calc_grtpos')
-            return
+            return False
 
     def calcTiming(self):
         """
@@ -1276,7 +1252,7 @@ class TableWidget(QWidget):
             if self.var['maplistpath']:
                 result = self.calcFile()
                 if result == False:
-                    return
+                    return False
             else:
                 print('Map file not found')
                 return False
@@ -1285,15 +1261,15 @@ class TableWidget(QWidget):
             if self.var['pattern'] == 'N-point cross':
                 result = self.calcNpoint()
                 if result == False:
-                    return
+                    return False
             elif self.var['pattern'] in ['Spiral', 'Inward spiral']:
                 result = self.calcSpiral()
                 if result == False:
-                    return
+                    return False
             elif self.var['pattern'] == 'Stare':
                 result = self.calcStare()
                 if result == False:
-                    return
+                    return False
 
         print('num list points is: ', self.var['numlistpoints'])
         print('nod cycles ', self.var['nodcycles'])
@@ -1431,15 +1407,21 @@ class TableWidget(QWidget):
 
             if self.var['instmode'] == 'OTF_TP':  # n > 2
                 self.var['skyspeed'] = skyspeed  # always positive
-                self.var['scandirection'] = scandirXY  # 'X' or 'Y'
+                self.var['scandirection'] = scandirXY  # '+/-X' or '+/-Y'
                 self.var['velangle'] = []
                 mapoffsets = np.array([map_lambda, map_beta])
+                if 'X' in scandirXY or 'Y' in scandirXY:  #  scandirXY[0] in ['X', 'Y']:
+                    message = 'Outdated Scan Template loaded. Please ' + \
+                        'load and save the .aor file with the most recent ' + \
+                        'version of USpot and run the AOR Translator again.'
+                    QMessageBox.about(self, "Out Of Date", message)
+                    return False
                 print('Scan offsets before rotation \n', mapoffsets)
                 for idx in range(len(skyspeed)):  # translate to EofN deg
-                    if map_lambda[idx] < 0 and scandirXY[idx] == 'X': velangle = 90
-                    if map_lambda[idx] > 0 and scandirXY[idx] == 'X': velangle = 270
-                    if map_beta[idx] < 0 and scandirXY[idx] == 'Y': velangle = 0
-                    if map_beta[idx] > 0 and scandirXY[idx] == 'Y': velangle = 180
+                    if scandirXY[idx] == '+X': velangle = 90
+                    if scandirXY[idx] == '-X': velangle = 270
+                    if scandirXY[idx] == '+Y': velangle = 0
+                    if scandirXY[idx] == '-Y': velangle = 180
                     total_angle = ((velangle + self.var['detangle']) + 360) % 360
                     self.var['velangle'].append(total_angle)  # normalize to 0 to 360/0
                     # need to rotate by MapRotationAngle
@@ -2041,6 +2023,7 @@ class TableWidget(QWidget):
             result = self.makemap(scan)
         else:  # 'File', 'N-point cross', 'Spiral', 'Stare'
             result = self.makemap(scan)
+        self.var['ind_scanindex'] = 0
 
         # save template and update History box: insert text at beginning
         if result != False:
@@ -2209,7 +2192,7 @@ class TableWidget(QWidget):
                        str(int(round(self.var['map_laston_beta']))).strip() + '_A.scn'
         scanfilepath = os.path.join(self.var['scandesdir'], self.var['obsid'], scanfilename)
         print('scanfilepath ', scanfilepath)
-        # print scanfilename
+
         check = s.check()
         if check[0] == 'NoErrors':
             print('Writing nod A.')
@@ -2297,7 +2280,7 @@ class TableWidget(QWidget):
         s.scn['obstype'] = self.var['obstype']
         # s.scn['focusoff'] = self.var['focusoff']
         s.scn['srctype'] = self.var['srctype']
-        s.scn['instmode'] = self.var['instmode']  # 'nodtype'? 'obsmode'?
+        s.scn['instmode'] = self.var['instmode']
         s.scn['redshift'] = self.var['redshift']
         s.scn['obs_coord_sys'] = self.var['target_coordsys']
         s.scn['target_lambda'] = self.var['target_lambda_deg']
@@ -2547,29 +2530,25 @@ class ScanDescription(QObject):
         if self.scn['instmode'] == "NONE": errmsg += 'Inst. mode not set\n'
         if self.scn['redshift'] == -99.: errmsg += 'Redshift not set\n'
         if self.scn['target_name'] == "NONE": errmsg += 'Object name not set\n'
-        if self.scn['target_lambda'] < 0. or self.scn['target_lambda'] >= 360.:
+        if not 0 <= self.scn['target_lambda'] < 360.:
             errmsg += 'OBSLAM out of range\n '
-        if self.scn['target_beta'] < -90.0 or self.scn['target_beta'] > 90:
+        if not -90.0 <= self.scn['target_beta'] <= 90.:
             errmsg += 'OBSBET out of range\n '
-        if self.scn['detangle'] < -180.0 or self.scn['detangle'] > 180:
+        if not -180. <= self.scn['detangle'] <= 180.:
             errmsg += 'DET_ANGL out of range\n '
-        if self.scn['los_focus_update'] < 0 or self.scn['los_focus_update'] > 2:
+        if self.scn['los_focus_update'] not in [0, 1, 2]:
             errmsg += 'LOSF_UPD out of range\n '
         if self.scn['nodpattern'] == "NONE": errmsg += 'NODPATT not set\n'
-        if self.scn['dichroic'] != self.DICHROIC_VAL[0] and \
-                self.scn['dichroic'] != self.DICHROIC_VAL[1]:
+        if self.scn['dichroic'] not in self.DICHROIC_VAL:
             errmsg += 'unkown DICHROIC\n '
-        if self.scn['order'] != 1 and self.scn['order'] != 2:
+        if self.scn['order'] not in [1, 2]:
             errmsg += 'GR_b_order out of range\n'
-        if self.scn['blue_filter'] != 1 and self.scn['blue_filter'] != 2:
+        if self.scn['blue_filter'] not in [1, 2]:
             errmsg += 'G_FLT_B out of range\n'
-
-        if self.scn['gr_lambda'][1] < self.BLUEMIN or \
-                self.scn['gr_lambda'][1] > self.BLUEMAX:
+        if not self.BLUEMIN <= self.scn['gr_lambda'][1] <= self.BLUEMAX:
             errmsg += 'GR_LAMBDA_b out of range\n '
         if self.scn['gr_cycles'][1] < 0: errmsg += 'GR_CYCLES_b negative\n '
-        if self.scn['gr_start'][1] < self.MIN_GR_POS or \
-                self.scn['gr_start'][1] > self.MAX_GR_POS:
+        if not self.MIN_GR_POS <= self.scn['gr_start'][1] <= self.MAX_GR_POS:
             errmsg += 'GR_START_b out of range\n '
         if self.scn['gr_steps_up'][1] <= 0:
             errmsg += 'GR_STEPS_UP_b not positive\n '
@@ -2580,12 +2559,10 @@ class ScanDescription(QObject):
         if abs(self.scn['gr_stepsize_down'][1]) > self.MAX_GR_STEP:
             errmsg += 'GR_STEPSIZE_DOWN_b too large\n '
 
-        if self.scn['gr_lambda'][0] < self.REDMIN or \
-                self.scn['gr_lambda'][0] > self.REDMAX:
+        if not self.REDMIN <= self.scn['gr_lambda'][0] <= self.REDMAX:
             errmsg += 'GR_LAMBDA_r out of range\n '
         if self.scn['gr_cycles'][0] < 0: errmsg += 'GR_CYCLES_r negative\n '
-        if self.scn['gr_start'][0] < self.MIN_GR_POS or \
-                self.scn['gr_start'][0] > self.MAX_GR_POS:
+        if not self.MIN_GR_POS <= self.scn['gr_start'][0] <= self.MAX_GR_POS:
             errmsg += 'GR_START_r out of range\n '
         if self.scn['gr_steps_up'][0] <= 0:
             errmsg += 'GR_STEPS_UP_r not positive\n '
@@ -2596,45 +2573,34 @@ class ScanDescription(QObject):
         if abs(self.scn['gr_stepsize_down'][0]) > self.MAX_GR_STEP:
             errmsg += 'GR_STEPSIZE_DOWN_r too large\n '
 
-        if self.scn['ramplength'][1] <= 0 or \
-                self.scn['ramplength'][1] > self.MAX_RAMP_LENGTH:
+        if not 0 < self.scn['ramplength'][1] <= self.MAX_RAMP_LENGTH:
             errmsg += 'RAMPLENGTH_b out of range\n '
-        if self.scn['ramplength'][0] <= 0 or \
-                self.scn['ramplength'][0] > self.MAX_RAMP_LENGTH:
+        if not 0 < self.scn['ramplength'][0] <= self.MAX_RAMP_LENGTH:
             errmsg += 'RAMPLENGTH_r out of range\n '
 
-        if self.scn['ch_scheme'] != '2POINT' and \
-                self.scn['ch_scheme'] != '4POINT':
+        if self.scn['ch_scheme'] not in defaults["obs_ref_chop_schemes"]:
             errmsg += 'CH_SCHEME unknown\n '
-        if self.scn['chop_amp'] < 0 or self.scn['chop_amp'] > self.MAX_CH_AMP:
+        if not 0 <= self.scn['chop_amp'] <= self.MAX_CH_AMP:
             errmsg += 'CH_THROW out of range\n '
-        if float(self.scn['chop_posang']) < 0 or \
-                float(self.scn['chop_posang']) >= 360:
+        if not 0 <= float(self.scn['chop_posang']) < 360:
             errmsg += 'CH_POSANGLE out of range\n '
         if self.scn['ch_cycles'][1] <= 0: errmsg += 'CH_CYCLES_b negative\n '
         if self.scn['ch_cycles'][0] <= 0: errmsg += 'CH_CYCLES_r negative\n '
-        if float(self.scn['chop_manualphase']) < 0 or \
-                float(self.scn['chop_manualphase']) >= 360:
+        if not 0 <= float(self.scn['chop_manualphase']) < 360:
             errmsg += 'CH_PHASE out of range\n '
         if self.scn['chop_length'] <= 0: errmsg += 'CHOPLENGTH out of range\n '
-        capacitors = ["1330", "604", "351", "238"]
-        if str(self.scn['sel_cap'][1]) not in capacitors:
+        if str(self.scn['sel_cap'][1]) not in defaults["obs_ref_blue_capacitors"]:
             errmsg += 'SEL_CAP_b unknown value\n '
-        if str(self.scn['sel_cap'][0]) not in capacitors:
+        if str(self.scn['sel_cap'][0]) not in defaults["obs_ref_red_capacitors"]:
             errmsg += 'SEL_CAP_r unknown value\n '
 
-        if self.scn['zero_bias'][1] > self.BLUE_ZB_MIN or \
-                self.scn['zero_bias'][1] < self.BLUE_ZB_MAX:
+        if not self.BLUE_ZB_MAX <= self.scn['zero_bias'][1] <= self.BLUE_ZB_MIN:
             errmsg += 'Z_BIAS_B out of range\n '
-        if self.scn['biasr'][1] > self.BLUE_BR_MIN or \
-                self.scn['biasr'][1] < self.BLUE_BR_MAX:
+        if not self.BLUE_BR_MAX <= self.scn['biasr'][1] <= self.BLUE_BR_MIN:
             errmsg += 'BIASR_B out of range\n '
-
-        if self.scn['zero_bias'][0] > self.RED_ZB_MIN or \
-                self.scn['zero_bias'][0] < self.RED_ZB_MAX:
+        if not self.RED_ZB_MAX <= self.scn['zero_bias'][0] <= self.RED_ZB_MIN:
             errmsg += 'Z_BIAS_R out of range\n '
-        if self.scn['biasr'][0] > self.RED_BR_MIN or \
-                self.scn['biasr'][0] < self.RED_BR_MAX:
+        if not self.RED_BR_MAX <= self.scn['biasr'][0] <= self.RED_BR_MIN:
             errmsg += 'BIASR_R out of range\n '
 
         if errmsg == '':
@@ -2646,11 +2612,11 @@ class ScanDescription(QObject):
             # check BLUE
             gr_end = self.scn['gr_start'][1] + \
                 self.scn['gr_steps_up'][1] * self.scn['gr_stepsize_up'][1]
-            if gr_end < self.MIN_GR_POS or gr_end > self.MAX_GR_POS:
+            if not self.MIN_GR_POS <= gr_end <= self.MAX_GR_POS:
                 errmsg += 'Blue grating exceeds range on up\n '
             gr_end = gr_end - \
                 self.scn['gr_steps_down'][1] * self.scn['gr_stepsize_down'][1]
-            if gr_end < self.MIN_GR_POS or gr_end > self.MAX_GR_POS:
+            if not self.MIN_GR_POS <= gr_end <= self.MAX_GR_POS:
                 errmsg += 'Blue grating exceeds range on down\n '
 
             ramplength = self.scn['ramplength'][1]
@@ -2689,11 +2655,11 @@ class ScanDescription(QObject):
             # check RED
             gr_end = self.scn['gr_start'][0] + \
                 self.scn['gr_steps_up'][0] * self.scn['gr_stepsize_up'][0]
-            if gr_end < self.MIN_GR_POS or gr_end > self.MAX_GR_POS:
+            if not self.MIN_GR_POS <= gr_end <= self.MAX_GR_POS:
                 errmsg += 'Red grating exceeds range on up\n '
             gr_end = gr_end - \
                 self.scn['gr_steps_down'][0] * self.scn['gr_stepsize_down'][0]
-            if gr_end < self.MIN_GR_POS or gr_end > self.MAX_GR_POS:
+            if not self.MIN_GR_POS <= gr_end <= self.MAX_GR_POS:
                 errmsg += 'Red grating exceeds range on down\n '
 
             ramplength = self.scn['ramplength'][0]
@@ -2790,7 +2756,7 @@ class ScanDescription(QObject):
         file.write('%s%s%s' % ("OBSBET".ljust(12),  # adjust ljust param
             str(self.scn["target_beta"]).ljust(20), '# in deg\n'))
         file.write('%s%s%s' % ("DET_ANGL".ljust(12),  # adjust ljust param
-            str(self.scn["detangle"]).ljust(20),
+            str("%.3f" % self.scn["detangle"]).ljust(20),
             '# Detector y-axis EofN\n'))
         file.write('%s%s%s' % ("CRDSYSMP".ljust(12),  # adjust ljust param
             ('"' + self.scn["mapcoord_system"] + '"').ljust(20),
