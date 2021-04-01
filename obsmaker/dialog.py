@@ -11,7 +11,8 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 from obsmaker.grating import inductosyn2wavelength, wavelength2inductosyn
 from obsmaker.io import (velocity2z, writeSct, readMap, add2widgets, addComboBox,
-                         createEditableBox, createWidget, createButton)
+                         createEditableBox, createWidget, createButton,
+                         writeDocx)
 
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
@@ -2421,6 +2422,12 @@ class TableWidget(QWidget):
                     sctPars[key] = os.path.basename(self.mapListPath)
                 elif key == 'NAIFID':
                     sctPars[key] = self.naifid
+                elif key == 'TIME_POINT':             # added Apr1,2021
+                    sctPars[key] = self.timePerPoint
+                elif key == 'PROPID':
+                    sctPars[key] = self.propID
+                elif key == 'OBSERVER':
+                    sctPars[key] = self.piName
                 else:
                     print('Unknown key ', key)
                     # self.update_status('exportSct: Unknown key ' + key + '\n')
@@ -2429,6 +2436,10 @@ class TableWidget(QWidget):
 
         msg = writeSct(sctPars,
             os.path.join(self.var['scandesdir'], self.var['obsid']) + '.sct')
+        # Write docx table for flight description
+        writeDocx(sctPars, 
+                  os.path.join(self.var['scandesdir'], self.var['obsid']) + '.docx',
+                  self.estObsTime.text())
         self.update_status(msg)
 
     def update_status(self, msg):

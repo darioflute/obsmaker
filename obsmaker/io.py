@@ -528,7 +528,7 @@ def writeSct(sctPars, sctfile):
         with io.open(filename, mode='w') as f:
             for key in sctPars.keys():
                 if sctPars[key] != "":
-                    f.write("{0:25s}#{1:s}\n".format(sctPars[key], key.upper()))
+                    f.write("{0:25s} #{1:s}\n".format(sctPars[key], key.upper()))
         print('File ' + filename + ' exported.')
         msg = "File " + filename + ' exported.\n'
     else: msg = 'Updated .sct file not saved.\n'
@@ -566,3 +566,135 @@ def readMap(filename=None):
     mapListPath = filename
     numMapPoints = numlines - 1
     return numMapPoints, mapListPath
+
+def writeDocx(sctPars, filename, obstime):
+    """
+    Write a *.docx table to insert in the flight description.
+    """
+    from docx import Document
+    from docx.shared import Inches
+    from docx.shared import Cm
+    from docx.shared import Pt
+    from docx.shared import RGBColor
+    import re
+    
+    lines = {
+          51.814:'[OIII]',
+          54.311:'[FeI]',
+          56.311:'[SI]',
+          57.317:'[NIII]',
+    	  60.640:'[PII]',
+    	  63.184:'[OI]',
+    	  67.200:'[FII]',
+    	  68.473:'[SiI]',
+    	  87.384:'[FeII]',
+    	  88.356:'[OIII]',
+    	  89.237:'[AlI]',
+    	 105.370:'[FeIII]',
+    	 111.183:'[FeI]',
+    	 121.898:'[NII]',
+    	 129.682:'[SiI]',
+    	 145.525:'[OI]',
+    	 157.741:'[CII]',
+    	 177.431:'[CIII]',
+    	 205.178:'[NII]'
+    }
+
+    document = Document()
+    # Change font, size, and color
+    run = document.add_paragraph().add_run('Observations')
+    font = run.font
+    font.bold = True
+    font.name = 'Calibri'
+    font.size = Pt(12)
+    font.color.rgb = RGBColor.from_string('002a77')
+
+    table = document.add_table(rows=6,cols=6)
+    
+    # Fix width of cells
+    for cell in table.columns[0].cells:
+        cell.width = Cm(2)
+    for cell in table.columns[1].cells:
+        cell.width = Cm(4)
+    for cell in table.columns[2].cells:
+        cell.width = Cm(4)
+    for cell in table.columns[3].cells:
+        cell.width = Cm(4)
+    for cell in table.columns[4].cells:
+        cell.width = Cm(4)
+    for cell in table.columns[5].cells:
+        cell.width = Cm(4)
+    
+    row1 = table.rows[0]
+    act = row1.cells[0]
+    aor_label = re.findall(r"act(\d+)\.", filename)[0]
+    act.text = 'Act\n'+aor_label
+    for paragraph in act.paragraphs:
+        for run in paragraph.runs:
+            run.font.bold = True
+    target = row1.cells[1].merge(row1.cells[2])
+    target.text='Target\n'+sctPars["TARGET_NAME"]
+    row1.cells[3].text='AOR\n'+sctPars["AORID"]
+    coords = row1.cells[4].merge(row1.cells[5])
+    coords.text='R.A.: '+sctPars["TARGET_LAMBDA"]+'\nDec:'+sctPars["TARGET_BETA"]
+    row2 = table.rows[1]
+    redshift = table.cell(1,0).merge(table.cell(1,2))
+    c = 299792.458
+    cz = '{0:.1f}'.format(float(sctPars["REDSHIFT"]) * c)
+    redshift.text ='Redshift: '+cz+' km/s'
+    redshift.text+='\n                                   Rest Wavelength:'
+    redshift.text+='\n                                     Grating steps:'
+    redshift.text+='\n                         Grating positions per nod:'
+    blue = sctPars["BLUE_MICRON"]
+    nodcycles = sctPars['NODCYCLES']
+    ngratpos = sctPars['BLUE_POSUP'] # hypothesis of posup only
+    gratstep = sctPars['BLUE_SIZEUP']
+    ngratnod = str(int(ngratpos) // int(nodcycles))
+    row2.cells[3].text = 'Blue grating\n'+blue+'\u00b5m'+lines[float(blue)]
+    row2.cells[3].text += '\n'+ngratpos+' \u00d7 '+gratstep+'\n'+ngratnod
+    redgrating = table.cell(1,4).merge(table.cell(1,5))
+    red = sctPars["RED_MICRON"]
+    redgrating.text = 'Red grating\n'+red+'\u00b5m'+lines[float(red)]
+    redgrating.text += '\n'+ngratpos+' \u00d7 '+gratstep+'\n'+ngratnod
+    
+    dichroic = table.cell(2,0).merge(table.cell(2,1))
+    dichroic.text = 'Dichroic: '+sctPars["DICHROIC"]
+    table.cell(2,2).text = 'Blue order: M'+sctPars["ORDER"]
+    gratingmode = table.cell(2,3).merge(table.cell(2,5))
+    gratingmode.text = 'Grating mode: '+sctPars['BLUE_LAMBDA']
+    
+    mode = table.cell(3,0).merge(table.cell(3,1))
+    mode.text = 'Mode:\n'+sctPars['OBSMODE']+' '+sctPars['NODPATTERN']
+    table.cell(3,2).text = 'Chop throw:\n'+sctPars['CHOP_AMP']+'"'
+    table.cell(3,3).text = 'Chop angle:\n'+sctPars['CHOP_POSANG']+'\u00b0 J2000'
+    table.cell(3,4).text = 'Primary array: '+sctPars['PRIMARYARRAY']
+    table.cell(3,5).text = 'FOV angle:\n'+sctPars['DETANGLE']+'\u00b0 J2000'
+    
+    dithering = table.cell(4,0).merge(table.cell(4,1))
+    dithering.text = 'Map: '+sctPars['DITHMAP_NUMPOINTS']+' point dither'
+    timeplanned = table.cell(4,2).merge(table.cell(4,3))
+    timeplanned.text ='Time planned: ??m'
+    timerunning = table.cell(4,4).merge(table.cell(4,5))
+    obstime = '{0:.1f} m'.format(float(obstime)/60)
+    timerunning.text ='Time running: '+obstime
+
+    a = table.cell(5, 0)
+    b = table.cell(5, 5)
+    comments = a.merge(b)
+    comments.text = 'Comments: '
+    table.style = 'Table Grid'
+    table.allow_autofit = True
+    # Change font, size, and color
+    for row in table.rows:
+        for cell in row.cells:
+            paragraphs = cell.paragraphs
+            for paragraph in paragraphs:
+                for run in paragraph.runs:
+                    font = run.font
+                    font.name = 'Calibri'
+                    font.size = Pt(12)
+                    #font.color.rgb = RGBColor(0x3f, 0x2c, 0x36)
+                    font.color.rgb = RGBColor.from_string('002a77')
+    # Save file
+    #filename = filename[:-4]+'.docx'
+    document.save(filename)
