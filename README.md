@@ -6,3 +6,7 @@
 
 # obsmaker
 Tool to program FIFI-LS observations starting from AOR files produced with USPOT.
+
+The latest version requires to install python-docx:
+
+conda install -c conda-forge python-docx
