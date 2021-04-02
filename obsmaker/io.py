@@ -645,16 +645,26 @@ def writeDocx(sctPars, filename, obstime):
     redshift.text+='\n                                   Rest Wavelength:'
     redshift.text+='\n                                     Grating steps:'
     redshift.text+='\n                         Grating positions per nod:'
-    blue = sctPars["BLUE_MICRON"]
     nodcycles = sctPars['NODCYCLES']
     ngratpos = sctPars['BLUE_POSUP'] # hypothesis of posup only
     gratstep = sctPars['BLUE_SIZEUP']
     ngratnod = str(int(ngratpos) // int(nodcycles))
-    row2.cells[3].text = 'Blue grating\n'+blue+'\u00b5m'+lines[float(blue)]
+    blue = sctPars["BLUE_MICRON"]
+    red = sctPars["RED_MICRON"]
+    wb = float(blue)
+    wr = float(red)
+    blueline = '?'
+    redline = '?'
+    for key in lines.keys():
+        if np.abs(wb - key) < 0.01:
+            blueline = lines[key]
+        if np.abs(wr - key) < 0.01:
+            redline = lines[key]
+    
+    row2.cells[3].text = 'Blue grating\n'+blue+'\u00b5m'+blueline
     row2.cells[3].text += '\n'+ngratpos+' \u00d7 '+gratstep+'\n'+ngratnod
     redgrating = table.cell(1,4).merge(table.cell(1,5))
-    red = sctPars["RED_MICRON"]
-    redgrating.text = 'Red grating\n'+red+'\u00b5m'+lines[float(red)]
+    redgrating.text = 'Red grating\n'+red+'\u00b5m'+redline
     redgrating.text += '\n'+ngratpos+' \u00d7 '+gratstep+'\n'+ngratnod
     
     dichroic = table.cell(2,0).merge(table.cell(2,1))
@@ -681,7 +691,7 @@ def writeDocx(sctPars, filename, obstime):
     a = table.cell(5, 0)
     b = table.cell(5, 5)
     comments = a.merge(b)
-    comments.text = 'Comments: '
+    comments.text = 'Comments: None'
     table.style = 'Table Grid'
     table.allow_autofit = True
     # Change font, size, and color
