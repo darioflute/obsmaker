@@ -736,8 +736,8 @@ def writeTable(sctPars, filename, obstime):
         f.write(r'\begin{tabular}{llll}'+'\n')
         f.write(r'\hline'+'\n')
         f.write(r'\hline'+'\n')
-        f.write(r'\multicolumn{2}{l}{\bf Act '+aor_label+'}&{\sl AOR\_ID}   '+sctPars["AORID"].replace('_','\_') +
-                '&{\sl P.I.} '+sctPars["OBSERVER"]+r'\\'+'\n')
+        f.write(r'\multicolumn{2}{l}{\bf Act '+aor_label+'}&{\sl AOR ID:}   '+sctPars["AORID"].replace('_','\_') +
+                '&{\sl P.I.:} '+sctPars["OBSERVER"]+r'\\'+'\n')
         f.write(r'\multicolumn{2}{l}{'+sctPars["TARGET_NAME"].replace('_','\_') + '}& ' +
                 sctPars["TARGET_LAMBDA"].replace(' ',':') + 
                 ' '+sctPars["TARGET_BETA"].replace(' ',':')
@@ -755,10 +755,10 @@ def writeTable(sctPars, filename, obstime):
         f.write(r'\multicolumn{2}{l}{\sl Grating mode: }&  \multicolumn{2}{l}{'+sctPars['BLUE_LAMBDA']+r'}\\'+'\n')
         f.write(r'\hline'+'\n')
         f.write(r'\hline'+'\n')
-        f.write('{\sl Dichroic} '+sctPars["DICHROIC"]+
-                '&{\sl Blue order} M'+sctPars["ORDER"]+
-                '&{\sl Primary array} '+sctPars['PRIMARYARRAY']+
-                '&{\sl FOV} '+sctPars['DETANGLE']+r'$^o$ J2000'+r'\\'+'\n')
+        f.write('{\sl Dichroic: } '+sctPars["DICHROIC"]+
+                '&{\sl Blue order: } M'+sctPars["ORDER"]+
+                '&{\sl Primary array: } '+sctPars['PRIMARYARRAY']+
+                '&{\sl FOV angle: } '+sctPars['DETANGLE']+r'$^o$ J2000'+r'\\'+'\n')
         f.write(r'\hline'+'\n')
         f.write(r'\hline'+'\n')
         f.write(r'{\sl Chop}&{\sl Mode}&{\sl Throw}&{\sl Angle}\\'+'\n')
@@ -769,8 +769,8 @@ def writeTable(sctPars, filename, obstime):
         f.write(r'\hline'+'\n')
         f.write(r'\hline'+'\n')
         f.write(r'\multicolumn{2}{l}{{\sl Map}: '+sctPars['DITHMAP_NUMPOINTS']+' point dither}'+
-                r'&{\sl Time planned} '+time_planned+
-                r'&{\sl Time running} '+obstime+r'\\'+'\n')
+                r'&{\sl Time planned: } '+time_planned+
+                r'&{\sl Time running: } '+obstime+r'\\'+'\n')
         f.write(r'\hline'+'\n')
         f.write(r'\hline'+'\n')
         f.write(r'\multicolumn{4}{l}{'+comments+r'}\\'+'\n')
