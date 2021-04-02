@@ -12,7 +12,7 @@ from astropy import units as u
 from obsmaker.grating import inductosyn2wavelength, wavelength2inductosyn
 from obsmaker.io import (velocity2z, writeSct, readMap, add2widgets, addComboBox,
                          createEditableBox, createWidget, createButton,
-                         writeDocx)
+                         writeTable)
 
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
@@ -2436,8 +2436,8 @@ class TableWidget(QWidget):
 
         msg = writeSct(sctPars,
             os.path.join(self.var['scandesdir'], self.var['obsid']) + '.sct')
-        # Write docx table for flight description
-        writeDocx(sctPars, 
+        # Write table for flight description (in docx and latex formats)
+        writeTable(sctPars, 
                   os.path.join(self.var['scandesdir'], self.var['obsid']) + '.docx',
                   self.estObsTime.text())
         self.update_status(msg)

@@ -567,9 +567,9 @@ def readMap(filename=None):
     numMapPoints = numlines - 1
     return numMapPoints, mapListPath
 
-def writeDocx(sctPars, filename, obstime):
+def writeTable(sctPars, filename, obstime):
     """
-    Write a *.docx table to insert in the flight description.
+    Write *.docx and *.tex tables to insert in the flight description.
     """
     from docx import Document
     from docx.shared import Inches
@@ -577,6 +577,7 @@ def writeDocx(sctPars, filename, obstime):
     from docx.shared import Pt
     from docx.shared import RGBColor
     import re
+    import os
     
     lines = {
           51.814:'[OIII]',
@@ -599,7 +600,28 @@ def writeDocx(sctPars, filename, obstime):
     	 177.431:'[CIII]',
     	 205.178:'[NII]'
     }
-
+    
+    # Look for readme file
+    aor_label = re.findall(r"act(\d+)\.", filename)[0]
+    aorfile = 'act'+aor_label+'.readme'
+    if os.path.exists(aorfile):
+        with open(aorfile) as f:
+            content = f.read().splitlines()
+        if len(content) == 1:
+            time_planned = content[0]
+            comments = 'Comments: None'
+        elif len(content) == 2:
+            time_planned = content[0] + ' m'
+            comments = content[1]
+        else:
+            print('The readme file has too many lines.\n First line is time, second (optional) comments.')
+            time_planned = ' ? m'
+            comments = 'Comments: None'    
+    else:
+        print('There is no readme file with time planned (and comments).')
+        time_planned = ' ? m'
+        comments = 'Comments: None'
+        
     document = Document()
     # Change font, size, and color
     run = document.add_paragraph().add_run('Observations')
@@ -627,7 +649,6 @@ def writeDocx(sctPars, filename, obstime):
     
     row1 = table.rows[0]
     act = row1.cells[0]
-    aor_label = re.findall(r"act(\d+)\.", filename)[0]
     act.text = 'Act\n'+aor_label
     for paragraph in act.paragraphs:
         for run in paragraph.runs:
@@ -657,9 +678,9 @@ def writeDocx(sctPars, filename, obstime):
     redline = '?'
     for key in lines.keys():
         if np.abs(wb - key) < 0.01:
-            blueline = lines[key]
+            blueline = ' '+lines[key]
         if np.abs(wr - key) < 0.01:
-            redline = lines[key]
+            redline = ' '+lines[key]
     
     row2.cells[3].text = 'Blue grating\n'+blue+'\u00b5m'+blueline
     row2.cells[3].text += '\n'+ngratpos+' \u00d7 '+gratstep+'\n'+ngratnod
@@ -683,15 +704,12 @@ def writeDocx(sctPars, filename, obstime):
     dithering = table.cell(4,0).merge(table.cell(4,1))
     dithering.text = 'Map: '+sctPars['DITHMAP_NUMPOINTS']+' point dither'
     timeplanned = table.cell(4,2).merge(table.cell(4,3))
-    timeplanned.text ='Time planned: ??m'
+    timeplanned.text ='Time planned: '+time_planned
     timerunning = table.cell(4,4).merge(table.cell(4,5))
     obstime = '{0:.1f} m'.format(float(obstime)/60)
     timerunning.text ='Time running: '+obstime
-
-    a = table.cell(5, 0)
-    b = table.cell(5, 5)
-    comments = a.merge(b)
-    comments.text = 'Comments: None'
+    comment = table.cell(5, 0).merge(table.cell(5, 5))
+    comment.text = comments
     table.style = 'Table Grid'
     table.allow_autofit = True
     # Change font, size, and color
@@ -708,3 +726,56 @@ def writeDocx(sctPars, filename, obstime):
     # Save file
     #filename = filename[:-4]+'.docx'
     document.save(filename)
+    
+    # Latex format table for future flight descriptions in Latex
+    filename = filename[:-5]+'.tex'
+    with open(filename, 'w') as f:
+        f.write(r'%\documentclass{article}'+'\n')
+        f.write(r'%\begin{document}'+'\n')
+        f.write(r'\begin{table}'+'\n'+r'\centering'+'\n')
+        f.write(r'\begin{tabular}{llll}'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'\multicolumn{2}{l}{\bf Act '+aor_label+'}&{\sl AOR\_ID}   '+sctPars["AORID"].replace('_','\_') +
+                '&{\sl P.I.} '+sctPars["OBSERVER"]+r'\\'+'\n')
+        f.write(r'\multicolumn{2}{l}{'+sctPars["TARGET_NAME"].replace('_','\_') + '}& ' +
+                sctPars["TARGET_LAMBDA"].replace(' ',':') + 
+                ' '+sctPars["TARGET_BETA"].replace(' ',':')
+                + '& ' + cz + r' km/s\\'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'\multicolumn{2}{l}{\sl Grating} & Blue & Red\\'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'\multicolumn{2}{l}{\sl Reference Wavelength:} & '+
+                blue+r'$\mu$m'+blueline+' &'+
+                red+r'$\mu$m'+redline+r'\\'+'\n')
+        f.write(r'\multicolumn{2}{l}{\sl Grating Steps:} & '+ngratpos+r' $\times$ '+gratstep +
+                '& '+ngratpos+r' $\times$ '+gratstep+r'\\'+'\n')
+        f.write(r'\multicolumn{2}{l}{\sl Grating Steps per Nod:} &'+ngratnod+'&'+ngratnod+r'\\'+'\n')
+        f.write(r'\multicolumn{2}{l}{\sl Grating mode: }&  \multicolumn{2}{l}{'+sctPars['BLUE_LAMBDA']+r'}\\'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write('{\sl Dichroic} '+sctPars["DICHROIC"]+
+                '&{\sl Blue order} M'+sctPars["ORDER"]+
+                '&{\sl Primary array} '+sctPars['PRIMARYARRAY']+
+                '&{\sl FOV} '+sctPars['DETANGLE']+r'$^o$ J2000'+r'\\'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'{\sl Chop}&{\sl Mode}&{\sl Throw}&{\sl Angle}\\'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write('&'+sctPars['OBSMODE']+' '+sctPars['NODPATTERN']+
+                '&'+sctPars['CHOP_AMP']+r'"'+
+                '&'+sctPars['CHOP_POSANG']+'$^o$ J2000'+r'\\'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'\multicolumn{2}{l}{{\sl Map}: '+sctPars['DITHMAP_NUMPOINTS']+' point dither}'+
+                r'&{\sl Time planned} '+time_planned+
+                r'&{\sl Time running} '+obstime+r'\\'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'\multicolumn{4}{l}{'+comments+r'}\\'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'\hline'+'\n')
+        f.write(r'\end{tabular}'+'\n')
+        f.write(r'\end{table}'+'\n')
+        f.write(r'%\end{document}')
