@@ -573,6 +573,20 @@ def writeTable(sctPars, filename, obstime):
     """
     import re
     import os
+    from docx import Document
+    from docx.shared import Inches
+    from docx.shared import Cm
+    from docx.shared import Pt
+    from docx.shared import RGBColor
+    from astropy import units as u
+    from astropy.coordinates import SkyCoord
+
+    # Check mode
+    if sctPars['INSTMODE'] in ['SYMMETRIC_CHOP','TOTAL_POWER']:
+        pass
+    else:
+        print('Table cannot be yet saved in this mode. Wait for future implementations !')
+        return
     
     lines = {
           51.814:'[OIII]',
@@ -629,21 +643,6 @@ def writeTable(sctPars, filename, obstime):
         time_planned = ' ? m'
         comments = 'Comments: None'
         
-    # Case of symmetric chop    
-    print('Instrumental mode ', sctPars['INSTMODE'])
-    if sctPars['INSTMODE'] == 'SYMMETRIC_CHOP':
-        saveTableSymmChop(sctPars, filename, obstime, aor_label, time_planned, 
-                          comments, blue, red, blueline, redline)
-    else:
-        print('Table cannot be yet saved in this mode. Wait for future implementations.')
-        
-def saveTableSymmChop(sctPars, filename,obstime, aor_label, time_planned, 
-                          comments, blue, red, blueline, redline):
-    from docx import Document
-    from docx.shared import Inches
-    from docx.shared import Cm
-    from docx.shared import Pt
-    from docx.shared import RGBColor
 
     document = Document()
     # Change font, size, and color
@@ -662,7 +661,7 @@ def saveTableSymmChop(sctPars, filename,obstime, aor_label, time_planned,
     for cell in table.columns[1].cells:
         cell.width = Cm(4)
     for cell in table.columns[2].cells:
-        cell.width = Cm(4)
+        cell.width = Cm(5)
     for cell in table.columns[3].cells:
         cell.width = Cm(4)
     for cell in table.columns[4].cells:
@@ -688,7 +687,7 @@ def saveTableSymmChop(sctPars, filename,obstime, aor_label, time_planned,
     redshift.text ='Redshift: '+cz+' km/s'
     redshift.text+='\n                                   Rest Wavelength:'
     redshift.text+='\n                                     Grating steps:'
-    redshift.text+='\n                         Grating positions per nod:'
+    redshift.text+='\n                      Grating positions per nod:'
     nodcycles = sctPars['NODCYCLES']
     ngratpos = sctPars['BLUE_POSUP'] # hypothesis of posup only
     gratstep = sctPars['BLUE_SIZEUP']
@@ -706,12 +705,28 @@ def saveTableSymmChop(sctPars, filename,obstime, aor_label, time_planned,
     gratingmode = table.cell(2,3).merge(table.cell(2,5))
     gratingmode.text = 'Grating mode: '+sctPars['BLUE_LAMBDA']
     
-    mode = table.cell(3,0).merge(table.cell(3,1))
-    mode.text = 'Mode:\n'+sctPars['OBSMODE']+' '+sctPars['NODPATTERN']
-    table.cell(3,2).text = 'Chop throw:\n'+sctPars['CHOP_AMP']+'"'
-    table.cell(3,3).text = 'Chop angle:\n'+sctPars['CHOP_POSANG']+'\u00b0 J2000'
-    table.cell(3,4).text = 'Primary array: '+sctPars['PRIMARYARRAY']
-    table.cell(3,5).text = 'FOV angle:\n'+sctPars['DETANGLE']+'\u00b0 J2000'
+    
+    # Case of symmetric chop    
+    if sctPars['INSTMODE'] == 'SYMMETRIC_CHOP':
+        # Chopping part
+        mode = table.cell(3,0).merge(table.cell(3,1))
+        mode.text = 'Mode:\n'+sctPars['OBSMODE']+' '+sctPars['NODPATTERN']
+        table.cell(3,2).text = 'Chop throw:\n'+sctPars['CHOP_AMP']+'"'
+        table.cell(3,3).text = 'Chop angle:\n'+sctPars['CHOP_POSANG']+'\u00b0 J2000'
+        table.cell(3,4).text = 'Primary array: '+sctPars['PRIMARYARRAY']
+        table.cell(3,5).text = 'FOV angle:\n'+sctPars['DETANGLE']+'\u00b0 J2000'
+    elif sctPars['INSTMODE'] == 'TOTAL_POWER':
+        mode = table.cell(3,0).merge(table.cell(3,1))
+        mode.text = 'Mode:\n'+sctPars['INSTMODE']+' '+sctPars['NODPATTERN']
+        table.cell(3,2).text = 'Off mode:\n'+sctPars['OFFPOS']
+        ra = float(sctPars['OFFPOS_LAMBDA'])
+        dec = float(sctPars['OFFPOS_BETA'])
+        c = SkyCoord(ra=ra*u.degree, dec=dec*u.degree, frame='icrs')
+        sra, sdec = c.to_string('hmsdms').split(' ')
+        table.cell(3,3).text = 'Off position:\n'+sra+'\n'+sdec
+        table.cell(3,4).text = 'Primary array: '+sctPars['PRIMARYARRAY']
+        table.cell(3,5).text = 'FOV angle:\n'+sctPars['DETANGLE']+'\u00b0 J2000'
+        
     
     dithering = table.cell(4,0).merge(table.cell(4,1))
     dithering.text = 'Map: '+sctPars['DITHMAP_NUMPOINTS']+' point dither'
@@ -773,11 +788,19 @@ def saveTableSymmChop(sctPars, filename,obstime, aor_label, time_planned,
                 '&{\sl FOV angle: } '+sctPars['DETANGLE']+r'$^o$ J2000'+r'\\'+'\n')
         f.write(r'\hline'+'\n')
         f.write(r'\hline'+'\n')
-        f.write(r'{\sl Chop}&{\sl Mode}&{\sl Throw}&{\sl Angle}\\'+'\n')
-        f.write(r'\hline'+'\n')
-        f.write('&'+sctPars['OBSMODE']+' '+sctPars['NODPATTERN']+
-                '&'+sctPars['CHOP_AMP']+r'"'+
-                '&'+sctPars['CHOP_POSANG']+'$^o$ J2000'+r'\\'+'\n')
+        if sctPars['INSTMODE'] == 'SYMMETRIC_CHOP':
+            f.write(r'{\sl Chop}&{\sl Mode}&{\sl Throw}&{\sl Angle}\\'+'\n')
+            f.write(r'\hline'+'\n')
+            f.write('&'+sctPars['OBSMODE']+' '+sctPars['NODPATTERN']+
+                    '&'+sctPars['CHOP_AMP']+r'"'+
+                    '&'+sctPars['CHOP_POSANG']+'$^o$ J2000'+r'\\'+'\n')
+        else:
+            f.write(r'{\sl Mode}&{\sl Nod pattern}&{\sl Off pos}&{\sl Coords}\\'+'\n')
+            f.write(r'\hline'+'\n')
+            f.write(sctPars['INSTMODE']+' &'+sctPars['NODPATTERN']+
+                    '&'+sctPars['OFFPOS']+
+                    '&'+ sra +' '+sdec+r'\\'+'\n')
+            
         f.write(r'\hline'+'\n')
         f.write(r'\hline'+'\n')
         f.write(r'\multicolumn{2}{l}{{\sl Map}: '+sctPars['DITHMAP_NUMPOINTS']+' point dither}'+
