@@ -571,11 +571,6 @@ def writeTable(sctPars, filename, obstime):
     """
     Write *.docx and *.tex tables to insert in the flight description.
     """
-    from docx import Document
-    from docx.shared import Inches
-    from docx.shared import Cm
-    from docx.shared import Pt
-    from docx.shared import RGBColor
     import re
     import os
     
@@ -601,6 +596,18 @@ def writeTable(sctPars, filename, obstime):
     	 205.178:'[NII]'
     }
     
+    blue = sctPars["BLUE_MICRON"]
+    red = sctPars["RED_MICRON"]
+    wb = float(blue)
+    wr = float(red)
+    blueline = '?'
+    redline = '?'
+    for key in lines.keys():
+        if np.abs(wb - key) < 0.01:
+            blueline = ' '+lines[key]
+        if np.abs(wr - key) < 0.01:
+            redline = ' '+lines[key]
+
     # Look for readme file
     aor_label = re.findall(r"act(\d+)\.", filename)[0]
     aorfile = 'act'+aor_label+'.readme'
@@ -622,6 +629,22 @@ def writeTable(sctPars, filename, obstime):
         time_planned = ' ? m'
         comments = 'Comments: None'
         
+    # Case of symmetric chop    
+    print('Instrumental mode ', sctPars['INSTMODE'])
+    if sctPars['INSTMODE'] == 'SYMMETRIC_CHOP':
+        saveTableSymmChop(sctPars, filename, obstime, aor_label, time_planned, 
+                          comments, blue, red, blueline, redline)
+    else:
+        print('Table cannot be yet saved in this mode. Wait for future implementations.')
+        
+def saveTableSymmChop(sctPars, filename,obstime, aor_label, time_planned, 
+                          comments, blue, red, blueline, redline):
+    from docx import Document
+    from docx.shared import Inches
+    from docx.shared import Cm
+    from docx.shared import Pt
+    from docx.shared import RGBColor
+
     document = Document()
     # Change font, size, and color
     run = document.add_paragraph().add_run('Observations')
@@ -670,17 +693,6 @@ def writeTable(sctPars, filename, obstime):
     ngratpos = sctPars['BLUE_POSUP'] # hypothesis of posup only
     gratstep = sctPars['BLUE_SIZEUP']
     ngratnod = str(int(ngratpos) // int(nodcycles))
-    blue = sctPars["BLUE_MICRON"]
-    red = sctPars["RED_MICRON"]
-    wb = float(blue)
-    wr = float(red)
-    blueline = '?'
-    redline = '?'
-    for key in lines.keys():
-        if np.abs(wb - key) < 0.01:
-            blueline = ' '+lines[key]
-        if np.abs(wr - key) < 0.01:
-            redline = ' '+lines[key]
     
     row2.cells[3].text = 'Blue grating\n'+blue+'\u00b5m'+blueline
     row2.cells[3].text += '\n'+ngratpos+' \u00d7 '+gratstep+'\n'+ngratnod
