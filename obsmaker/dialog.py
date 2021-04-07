@@ -141,7 +141,7 @@ class TableWidget(QWidget):
         self.gratingDirection = addComboBox('Grating direction: ', self.gratingDirections, c2)
         self.gratingDirection.currentIndexChanged.connect(self.gratingDirectionChange)
         self.scanFilesPerSplit = createEditableBox('n/a', 70, 'Scan files per split: ', c2)
-        self.rewindMode = addComboBox('LOS rewind mode: ', ['Auto', 'Manual'], c2)
+        self.rewindMode = addComboBox('LOS rewind mode: ', ['Manual', 'Auto'], c2)
 
         c2.addRow(QLabel('Off position'), None)
         self.offpositions = ['Matched', 'Absolute', 'Relative to target', 'Relative to active map pos']

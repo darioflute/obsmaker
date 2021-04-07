@@ -8,7 +8,7 @@
 "r_primary_array_default" : "BLUE",
 "r_nodpattern_default" : "AB",
 "r_grating_pos_default" : "Up",
-"r_los_rewind_default" : "Auto",
+"r_los_rewind_default" : "Manual",
 "r_offpos_default" : "Matched",
 "r_chopper_phase_default" : "Default",
 "r_tracking_default" : "On",
