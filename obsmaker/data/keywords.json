@@ -149,7 +149,7 @@
 
 "OBSTYPE_default" : "OBJECT",
 "NODPATTERN_default" : "ABBA",
-"REWIND_default" : "Manual",
+"REWIND_default" : "Auto",
 "OFFPOS_REDUC_default" : 1.0,
 
 "SETPOINT_default" : "n/a",
