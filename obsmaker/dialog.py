@@ -141,7 +141,7 @@ class TableWidget(QWidget):
         self.gratingDirection = addComboBox('Grating direction: ', self.gratingDirections, c2)
         self.gratingDirection.currentIndexChanged.connect(self.gratingDirectionChange)
         self.scanFilesPerSplit = createEditableBox('n/a', 70, 'Scan files per split: ', c2)
-        self.rewindMode = addComboBox('LOS rewind mode: ', ['Manual', 'Auto'], c2)
+        self.rewindMode = addComboBox('LOS rewind mode: ', ['Auto','Manual'], c2)
 
         c2.addRow(QLabel('Off position'), None)
         self.offpositions = ['Matched', 'Absolute', 'Relative to target', 'Relative to active map pos']
@@ -179,7 +179,7 @@ class TableWidget(QWidget):
         self.chopLengthSamples = createEditableBox('64', 70, 'Chop samples per position ', c3, 'double')
         self.trackingInB = addComboBox('Tracking in pos B: ', ['On', 'Off'], c3)
         c3.addRow(QLabel('Input params per mapping position'), None)
-        self.onSourceTimeChop = createEditableBox('', 70, 'On-source time: ', c3, 'int', 15)
+        self.onSourceTimeChop = createEditableBox('', 70, 'On source time: ', c3, 'int', 15)
         self.noGratPosChop = createEditableBox('', 70, 'No of grating positions:  ', c3, 'int')
         self.totMapPositions = createEditableBox('1', 70, 'Total no of mapping positions: ', c3, 'int')
         self.chopCompute = createButton('Compute')
@@ -188,7 +188,7 @@ class TableWidget(QWidget):
         c3.addRow(self.chopCompute, None)
         self.nodCycles = createEditableBox('', 70, 'No of nod cycles: ', c3)
         self.ccPerGratPos = createEditableBox('', 70, 'Chop cycles per grating pos: ', c3)
-        self.ccPerGratPos.setReadOnly(True)
+        #self.ccPerGratPos.setReadOnly(True) - editable on request of Christian
         self.noGratPos4Nod = createEditableBox('', 70, 'No of grating pos per nod: ', c3)
         self.noGratPos4Nod.setReadOnly(True)
         self.gratCycle4Nod = createEditableBox('', 70, 'Grating cycle per nod (30.0): ', c3)
@@ -2423,7 +2423,7 @@ class TableWidget(QWidget):
                 elif key == 'NAIFID':
                     sctPars[key] = self.naifid
                 elif key == 'TIME_POINT':             # added Apr1,2021
-                    sctPars[key] = self.timePerPoint
+                    sctPars[key] = '{0:.1f}'.format(float(self.onSourceTimeChop.text()) / int(self.nodCycles.text()))
                 elif key == 'PROPID':
                     sctPars[key] = self.propID
                 elif key == 'OBSERVER':

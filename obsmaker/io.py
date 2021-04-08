@@ -528,6 +528,7 @@ def writeSct(sctPars, sctfile):
         with io.open(filename, mode='w') as f:
             for key in sctPars.keys():
                 if sctPars[key] != "":
+                    print(sctPars[key])
                     f.write("{0:25s} #{1:s}\n".format(sctPars[key], key.upper()))
         print('File ' + filename + ' exported.')
         msg = "File " + filename + ' exported.\n'
