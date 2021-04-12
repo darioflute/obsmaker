@@ -528,7 +528,7 @@ def writeSct(sctPars, sctfile):
         with io.open(filename, mode='w') as f:
             for key in sctPars.keys():
                 if sctPars[key] != "":
-                    print(sctPars[key])
+                    #print(sctPars[key])
                     f.write("{0:25s} #{1:s}\n".format(sctPars[key], key.upper()))
         print('File ' + filename + ' exported.')
         msg = "File " + filename + ' exported.\n'
@@ -624,7 +624,7 @@ def writeTable(sctPars, filename, obstime):
             redline = ' '+lines[key]
 
     # Look for readme file
-    aor_label = re.findall(r"act(\d+)\.", filename)[0]
+    aor_label = re.findall(r"act(\d+)", filename)[0]
     aorfile = 'act'+aor_label+'.readme'
     if os.path.exists(aorfile):
         with open(aorfile) as f:
