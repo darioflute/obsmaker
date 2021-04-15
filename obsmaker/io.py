@@ -395,6 +395,11 @@ def writeFAOR(aor, PropID, PIname, outdir):
     values['RED_POSUP'] = int(math.ceil(red_pix_per_nod / config['max_stepsize_inPix']) * nodcycles)
     values['RED_SIZEUP'] = config['gratstepsize']
     # values['RED_SIZEUP'] = bandwidthRed_pix / values['RED_POSUP']
+    
+    # Fix to put a default value to the number of grating positions (1 ?)
+    # since the computation done in the previous steps does not make sense in general.
+    values['BLUE_POSUP'] = config['BLUE_POSUP_default']  # 0
+    values['RED_POSUP'] = config['RED_POSUP_default']  # 0
 
     # Cycle 5: SCANDIST is always Up, SPLITS is always 1,
     # RED_LAMBDA and BLUE_LAMBDA are always Inward dither

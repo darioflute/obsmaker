@@ -157,9 +157,13 @@
 "BLUE_GRTCYC_default" : 1,
 "BLUE_SIZEDOWN_default" : 0.0,
 "BLUE_POSDOWN_default" : 0,
+"BLUE_POSUP_default" : 0,
 "RED_GRTCYC_default" : 1,
 "RED_SIZEDOWN_default" : 0.0,
 "RED_POSDOWN_default" : 0,
+"RED_POSUP_default" : 0,
+    
+    
 
 "BLUE_RAMPLEN_default" : 32,
 "RED_RAMPLEN_default" : 32,
