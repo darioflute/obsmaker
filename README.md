@@ -33,7 +33,7 @@ conda env remove -n obsmaker
 ```
 # Troubleshooting
 
-On mac-osx it can happen that the lxml does not link properly the lxml2 libraries.
+On mac-osx it can happen that the lxml does not link properly the xml2 libraries.
 To check if this work, try:
 
 ```
