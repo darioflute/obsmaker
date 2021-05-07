@@ -725,11 +725,11 @@ def writeTable(sctPars, filename, obstime):
         mode = table.cell(3,0).merge(table.cell(3,1))
         mode.text = 'Mode:\n'+sctPars['INSTMODE']+' '+sctPars['NODPATTERN']
         table.cell(3,2).text = 'Off mode:\n'+sctPars['OFFPOS']
-        ra = float(sctPars['OFFPOS_LAMBDA'])
-        dec = float(sctPars['OFFPOS_BETA'])
-        c = SkyCoord(ra=ra*u.degree, dec=dec*u.degree, frame='icrs')
-        sra, sdec = c.to_string('hmsdms').split(' ')
-        table.cell(3,3).text = 'Off position:\n'+sra+'\n'+sdec
+        #ra = float(sctPars['OFFPOS_LAMBDA']) Wrong ! This is not the position
+        #dec = float(sctPars['OFFPOS_BETA'])
+        #c = SkyCoord(ra=ra*u.degree, dec=dec*u.degree, frame='icrs')
+        #sra, sdec = c.to_string('hmsdms').split(' ')
+        table.cell(3,3).text = 'Offset:\n'+sctPars['OFFPOS_LAMBDA']+'\n'+sctPars['OFFPOS_BETA']
         table.cell(3,4).text = 'Primary array: '+sctPars['PRIMARYARRAY']
         table.cell(3,5).text = 'FOV angle:\n'+sctPars['DETANGLE']+'\u00b0 J2000'
         
@@ -801,11 +801,12 @@ def writeTable(sctPars, filename, obstime):
                     '&'+sctPars['CHOP_AMP']+r'"'+
                     '&'+sctPars['CHOP_POSANG']+'$^o$ J2000'+r'\\'+'\n')
         else:
-            f.write(r'{\sl Mode}&{\sl Nod pattern}&{\sl Off pos}&{\sl Coords}\\'+'\n')
+            f.write(r'{\sl Mode}&{\sl Nod pattern}&{\sl Offset}&{\sl Coords}\\'+'\n')
             f.write(r'\hline'+'\n')
             f.write(sctPars['INSTMODE']+' &'+sctPars['NODPATTERN']+
                     '&'+sctPars['OFFPOS']+
-                    '&'+ sra +' '+sdec+r'\\'+'\n')
+                    #'&'+ sra +' '+sdec+r'\\'+'\n')
+                    '&'+ sctPars['OFFPOS_LAMBDA'] +' '+sctPars['OFFPOS_BETA']+r'\\'+'\n')
             
         f.write(r'\hline'+'\n')
         f.write(r'\hline'+'\n')
