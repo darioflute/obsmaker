@@ -207,9 +207,10 @@ def writeFAOR(aor, PropID, PIname, outdir):
     values['NODPATTERN'] = aor['NodPattern'][0]   # new in Cycle 9
     # older cycle ObsPlans downloaded w/ Cycle 9 USpot will have incorrect
     # NodPattern so fix it here -- will comment out/delete this part later
-    if values['AORID'][0:2] in ['03', '04', '05', '06', '07', '08'] or \
+    if values['AORID'][0:2] in ['03', '04', '05', '06', '07', '08', '09'] or \
             values['NODPATTERN'] == "":
-        if values['INSTMODE'] == 'SYMMETRIC_CHOP': values['NODPATTERN'] = 'ABBA'
+        if values['INSTMODE'] == 'SYMMETRIC_CHOP': 
+            values['NODPATTERN'] = 'ABBA'
         if values['INSTMODE'] in ['ASYMMETRIC_CHOP', 'TOTAL_POWER', 'SPECTRAL_SCAN']:
             values['NODPATTERN'] = 'ABA'
 
