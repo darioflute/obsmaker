@@ -12,52 +12,67 @@ def inductosyn2wavelength(gratpos, dichroic, array, order, obsdate=''):
     """
     # if obsdate not specified, assume today
     if obsdate == '':
-        today = str(time.gmtime().tm_year)[2:]
-        today += ('0' + str(time.gmtime().tm_mon))[-2:]
-        obsdate = today
-
+        year =  str(time.gmtime().tm_year)
+        month = '{0:02d}'.format(time.gmtime().tm_mon)
+        day = '{0:02d}'.format(time.gmtime().tm_mday)
+        obsdate = year+month+day
+    
+    # Case of array/dichroic/order
     if array == 'RED':
-        channel = 'R'
+        if dichroic == '105':
+            channel = 'R105'
+        else:
+            channel = 'R130'
     else:
         if order == '1':
             channel = 'B1'
         else:
             channel = 'B2'
 
+    # Read file with wavelength calibration coefficients
     path0 = os.path.dirname(os.path.realpath(__file__))
-    wvdf = pd.read_csv(os.path.join(path0, 'data', 'CalibrationResults.csv'), header=[0, 1])
-    ndates = (len(wvdf.columns) - 2) // 4
-    dates = np.zeros(ndates)
-    for i in range(ndates):
-        dates[i] = wvdf.columns[2 + i * 4][0]
+    header_list = ["Date", "ch", "g0","NP","a","PS","QOFF","QS",
+               "I1","I2","I3","I4","I5","I6","I7","I8","I9","I10",
+               "I11","I12","I13","I14","I15","I16","I17","I18","I19","I20",
+               "I21","I22","I23","I24","I25"]
 
-    # Select correct date
+    wvdf = pd.read_csv(os.path.join(path0, 'data' ,'FIFI_LS_WaveCal_Coeffs.txt'), 
+                   comment='#', delimiter='\s+', names=header_list)
+    
+    # Fixed variables
+    ISF = 1
+    if array == 'RED':
+        gamma = 0.0167200
+    else:
+        gamma = 0.0089008
+        
+    print('obsdate ', obsdate)
+    
+
+    # Select calibration date
+    dates = np.unique(wvdf['Date'])
+    print('dates ', dates)
     for i, date in enumerate(dates):
         if date < int(obsdate):
             pass
         else:
             break
-    cols = range(2 + 4 * i, 2 + 4 * i + 4)
-    w1 = wvdf[wvdf.columns[cols]].copy()
-    if channel == 'R':
-        if dichroic == 105:
-            co = w1.columns[0]
-        else:
-            co = w1.columns[1]
-    elif channel == 'B1':
-        co = w1.columns[2]
-    else:
-        co = w1.columns[3]
+        
+    idx = dates < int(obsdate)
+    print('idx ', idx)
+    caldate = np.max(dates[idx])   
+        
+    # Select line in calibration file with caldate and channel
+    idx = (wvdf["Date"] == caldate) & (wvdf["ch"] == channel)
+    wcal = wvdf.loc[idx]
 
-    g0 = w1.iloc[0][co]
-    NP = w1.iloc[1][co]
-    a = w1.iloc[2][co]
-    ISF = w1.iloc[3][co]
-    gamma = w1.iloc[4][co]
-    PS = w1.iloc[5][co]
-    QOFF = w1.iloc[6][co]
-    QS = w1.iloc[7][co]
-    ISOFF = w1.iloc[8:][co].values
+    g0 = wcal['g0'].values[0]
+    NP = wcal['NP'].values[0]
+    a = wcal['a'].values[0]
+    PS = wcal['PS'].values[0]
+    QOFF = wcal['QOFF'].values[0]
+    QS = wcal['QS'].values[0]
+    ISOFF = wcal.iloc[0][8:].values
 
     order = int(order)
     try:

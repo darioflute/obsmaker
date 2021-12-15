@@ -263,7 +263,7 @@ def writeFAOR(aor, PropID, PIname, outdir):
     values['CHOP_POSANG'] = (float(aor['ChopAngle'][0]) + 270 + 360) % 360
         # CCW from N in SSpot, S of E in ObsMaker
 
-    if (values['CHOPCOORD_SYSTEM'] == 'HORZION') and (aor['ChopAngle'] != 0):
+    if (values['CHOPCOORD_SYSTEM'] == 'HORIZON') and (aor['ChopAngle'] != 0):
         errmsg += "NON-ZERO CHOP ANGLE WITH HORIZON\n"
     if values['CHOPCOORD_SYSTEM'] == 'HORIZON':
         values['CHOP_POSANG'] = 0
