@@ -16,11 +16,13 @@ requirements:
     - setuptools
     - python
     - pandas
+    - unidecode
 
   run:
     - python
     - numpy >=1.11
     - pandas >=0.25
+    - unidecode
         
 test:
   imports:

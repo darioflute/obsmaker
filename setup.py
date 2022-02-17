@@ -21,7 +21,7 @@ config = {
     'scripts': ['bin/obsmaker'],
     'include_package_data':True,
     'package_data':{'obsmaker':['version.json','data/*']},
-    'install_requires': ['numpy', 'pandas'],
+    'install_requires': ['numpy', 'pandas', 'unidecode'],
     'classifiers':[
             "Programming Language :: Python :: 3",
             "License :: OSI Approved :: GPLv3+ License",
