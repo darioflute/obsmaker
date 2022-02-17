@@ -38,6 +38,7 @@ class GUI(QMainWindow):
         """
         Read *aor created with USPOT, split it into multiple parts and save it in *.sct files.
         """
+        from unidecode import unidecode
         fd = QFileDialog(None, "Load and translate AOR")
         fd.setLabelText(QFileDialog.Accept, "Import")
         fd.setNameFilters(["AOR Files (*.aor)", "All Files (*)"])
@@ -67,7 +68,8 @@ class GUI(QMainWindow):
             PropID = tree.find('list/ProposalInfo/ProposalID').text
             PI = tree.find('list/ProposalInfo/Investigator')
             #PIname = PI.attrib['Honorific'] + ' ' + PI.attrib['FirstName'] + ' ' + PI.attrib['LastName']
-            PIname = PI.attrib['FirstName'] + ' ' + PI.attrib['LastName']
+            # Get rid of non-ASCII characters
+            PIname = unidecode(PI.attrib['FirstName'] + ' ' + PI.attrib['LastName'])
             print('Proposal ID ', PropID)
             print('Proposer ', PIname)
             if PropID == None:
