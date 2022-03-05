@@ -24,6 +24,7 @@ requirements:
     - pandas >=0.25
     - unidecode
     - pyqt
+    - astropy >=3.0
         
 test:
   imports:
