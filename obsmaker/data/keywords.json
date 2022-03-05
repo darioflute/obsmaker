@@ -48,7 +48,8 @@
     "deltaX",
     "deltaY",
     "scanSpeed",
-    "scanDirection"],
+    "scanDirection",
+    "PlannedTime"],
 
 "max_stepsize_inPix" :  1.5,
 "max_grmov_per_scn_inPix" : 4,
@@ -134,7 +135,8 @@
     "BLUE_BIASR",
     "PROPID",
     "OBSERVER",
-    "TIME_POINT"
+    "TIME_POINT",
+    "TIME_PLANNED"
 ],
 
 "MAPCOORD_SYSTEM_default" : "J2000",

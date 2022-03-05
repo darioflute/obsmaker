@@ -426,6 +426,7 @@ def writeFAOR(aor, PropID, PIname, outdir):
 
     values['TIME_POINT'] = float(aor['TimePerPoint'][0])
     chopCycles_per_nod = 2. * float(aor['TimePerPoint'][0])
+    values['TIME_PLANNED'] = float(aor['PlannedTime'][0])
     values['BLUE_CHOPCYC'] = int(math.ceil(chopCycles_per_nod * nodcycles / \
                               (values['BLUE_POSUP'] * values['SPLITS'])))
     values['RED_CHOPCYC'] = int(math.ceil(chopCycles_per_nod * nodcycles / \
@@ -628,6 +629,11 @@ def writeTable(sctPars, filename, obstime):
             blueline = ' '+lines[key]
         if np.abs(wr - key) < 0.01:
             redline = ' '+lines[key]
+            
+    try:
+        time_planned = sctPars["TIME_PLANNED"]
+    except:
+        time_planned = '0'
 
     # Look for readme file
     print('filename is ', filename)
@@ -644,11 +650,11 @@ def writeTable(sctPars, filename, obstime):
             comments = content[1]
         else:
             print('The readme file has too many lines.\n First line is time, second (optional) comments.')
-            time_planned = ' ? m'
+            #time_planned = ' ? m'
             comments = 'Comments: None'    
     else:
         print('There is no readme file with time planned (and comments).')
-        time_planned = ' ? m'
+        #time_planned = ' ? m'
         comments = 'Comments: None'
         
 
@@ -798,12 +804,13 @@ def writeTable(sctPars, filename, obstime):
         f.write(r'\hline'+'\n')
         f.write(r'\hline'+'\n')
         if sctPars['INSTMODE'] == 'SYMMETRIC_CHOP':
-            f.write(r'{\sl Chop}&{\sl Mode}&{\sl Throw}&{\sl Angle [S of E]}\\'+'\n')
+            f.write(r'{\sl Chop}&{\sl Mode}&{\sl Throw}&{\sl Angle [E of N]}\\'+'\n')
             f.write(r'\hline'+'\n')
             if sctPars['CHOPCOORD_SYSTEM'] == 'HORIZON':
                 chopang = 'HORIZON'
             else:
-                chopang = sctPars['CHOP_POSANG']+'$^o$ J2000'
+                chopangle = (int(float(sctPars['CHOP_POSANG']))-270+360)%360
+                chopang = '{0:.0f}$^o$ J2000'.format(chopangle)
             chopthrow = '{0:.0f}'.format(float(sctPars['CHOP_AMP']) * 2)
             f.write('&'+sctPars['OBSMODE']+' '+sctPars['NODPATTERN']+
                     '&'+chopthrow+r'"'+'&'+chopang+r'\\'+'\n')

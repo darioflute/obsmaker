@@ -76,6 +76,7 @@ class TableWidget(QWidget):
         # Default
         self.mapListPath = ''  # os.getcwd()
         self.timePerPoint = 0
+        self.timePlanned = 0
         self.naifid = ''
 
         # Col 1
@@ -119,6 +120,8 @@ class TableWidget(QWidget):
         self.redshift.textEdited.connect(self.redshiftUpdated)
         self.velocity = createEditableBox('0', 100, 'Velocity [cz]: ', c1, 'double')
         self.velocity.textEdited.connect(self.velocityUpdated)
+        self.timePlanned = createEditableBox('0', 100, 'Planned time: ', c1, 'double')
+        self.timePlanned.textEdited.connect(self.timePlannedUpdated)
         self.detectorAngle = createEditableBox('0', 70, 'Detector angle (E of N): ', c1, 'double')
         self.observingmodes = ["Symmetric", "Asymmetric"]
         # observingmodes = ["Beam switching", "Unmatched nodding"]
@@ -359,6 +362,9 @@ class TableWidget(QWidget):
         except:
             print('Wrong value inserted')
         self.writeObservation.setEnabled(False)
+        
+    def timePlannedUpdated(self):
+        pass
 
     def piNameUpdated(self):
         """Action triggered by PI Name box."""
@@ -876,7 +882,8 @@ class TableWidget(QWidget):
                 'BLUE_GRTCYC'	   :self.blueGratCycles,
                 'BLUE_ZBIAS'	   :self.blueZeroBias,
                 'BLUE_BIASR'       :self.blueBiasR,
-                'TIME_POINT'       :self.timePerPoint
+                'TIME_POINT'       :self.timePerPoint,
+                'TIME_PLANNED'     :self.timePlanned
             }
 
     def update_gui(self, aorPars):
@@ -919,6 +926,8 @@ class TableWidget(QWidget):
                     self.timePerPoint = aorPars[key]
                 elif key == 'NAIFID':
                     self.naifid = aorPars[key]
+                elif key == 'TIME_PLANNED':
+                    self.timePlanned = aorPars[key]
                 else:
                     print('Unknown key ', key)
                     self.update_status('update: Unknown key ' + key + '\n')
