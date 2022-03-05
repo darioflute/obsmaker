@@ -23,6 +23,7 @@ requirements:
     - numpy >=1.11
     - pandas >=0.25
     - unidecode
+    - pyqt
         
 test:
   imports:
