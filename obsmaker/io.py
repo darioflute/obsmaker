@@ -630,7 +630,8 @@ def writeTable(sctPars, filename, obstime):
             redline = ' '+lines[key]
 
     # Look for readme file
-    aor_label = re.findall(r"act(\d+)", filename)[0]
+    print('filename is ', filename)
+    aor_label = re.findall(r"act(\d+)", filename, re.IGNORECASE)[0]
     aorfile = 'act'+aor_label+'.readme'
     if os.path.exists(aorfile):
         with open(aorfile) as f:
@@ -797,11 +798,15 @@ def writeTable(sctPars, filename, obstime):
         f.write(r'\hline'+'\n')
         f.write(r'\hline'+'\n')
         if sctPars['INSTMODE'] == 'SYMMETRIC_CHOP':
-            f.write(r'{\sl Chop}&{\sl Mode}&{\sl Throw}&{\sl Angle}\\'+'\n')
+            f.write(r'{\sl Chop}&{\sl Mode}&{\sl Throw}&{\sl Angle [S of E]}\\'+'\n')
             f.write(r'\hline'+'\n')
+            if sctPars['CHOPCOORD_SYSTEM'] == 'HORIZON':
+                chopang = 'HORIZON'
+            else:
+                chopang = sctPars['CHOP_POSANG']+'$^o$ J2000'
+            chopthrow = '{0:.0f}'.format(float(sctPars['CHOP_AMP']) * 2)
             f.write('&'+sctPars['OBSMODE']+' '+sctPars['NODPATTERN']+
-                    '&'+sctPars['CHOP_AMP']+r'"'+
-                    '&'+sctPars['CHOP_POSANG']+'$^o$ J2000'+r'\\'+'\n')
+                    '&'+chopthrow+r'"'+'&'+chopang+r'\\'+'\n')
         else:
             f.write(r'{\sl Mode}&{\sl Nod pattern}&{\sl Offset}&{\sl Coords}\\'+'\n')
             f.write(r'\hline'+'\n')

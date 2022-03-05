@@ -46,12 +46,12 @@ def inductosyn2wavelength(gratpos, dichroic, array, order, obsdate=''):
     else:
         gamma = 0.0089008
         
-    print('obsdate ', obsdate)
+    #print('obsdate ', obsdate)
     
 
     # Select calibration date
     dates = np.unique(wvdf['Date'])
-    print('dates ', dates)
+    #print('dates ', dates)
     for i, date in enumerate(dates):
         if date < int(obsdate):
             pass
@@ -59,7 +59,7 @@ def inductosyn2wavelength(gratpos, dichroic, array, order, obsdate=''):
             break
         
     idx = dates < int(obsdate)
-    print('idx ', idx)
+    #print('idx ', idx)
     caldate = np.max(dates[idx])   
         
     # Select line in calibration file with caldate and channel
